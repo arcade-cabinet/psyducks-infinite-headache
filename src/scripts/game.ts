@@ -4,9 +4,11 @@
 
 // Types
 export interface GameState {
-  mode: "MENU" | "PLAYING" | "GAMEOVER";
+  mode: "MENU" | "PLAYING" | "GAMEOVER" | "LEVELUP";
   score: number;
   highScore: number;
+  level: number;
+  seed: string;
   ducks: Duck[];
   currentDuck: Duck | null;
   bgRotation: number;
@@ -19,6 +21,39 @@ export interface GameState {
   isDragging: boolean;
   dragStartX: number;
   mergeCount: number;
+  rng: any; // SeededRandom instance
+  levelConfigs: LevelConfig[];
+}
+
+export interface LevelConfig {
+  color: string;
+  secondaryColor: string;
+  name: string;
+  spawnInterval: number;
+  wobbleMultiplier: number;
+}
+
+/**
+ * Generate level configs from seed
+ */
+export function generateLevelConfigs(seededRandom: any, count = 10): LevelConfig[] {
+  const configs: LevelConfig[] = [];
+  
+  for (let i = 0; i < count; i++) {
+    const colors = seededRandom.generateColorPair();
+    const baseInterval = 2000;
+    const intervalReduction = Math.log(i + 1) * 150; // Logarithmic difficulty
+    
+    configs.push({
+      color: colors.primary,
+      secondaryColor: colors.secondary,
+      name: seededRandom.generateLevelName(),
+      spawnInterval: Math.max(800, baseInterval - intervalReduction),
+      wobbleMultiplier: 1.0 + i * 0.1,
+    });
+  }
+  
+  return configs;
 }
 
 export interface Config {
@@ -54,6 +89,8 @@ export function drawPsyduck(
   height: number,
   stress: number,
   isHeadache: boolean,
+  primaryColor = "#FDD835",
+  secondaryColor = "#FFE082",
 ) {
   ctx.save();
   ctx.translate(x, y);
@@ -86,7 +123,7 @@ export function drawPsyduck(
   ctx.stroke();
 
   // Body
-  ctx.fillStyle = "#FDD835";
+  ctx.fillStyle = primaryColor;
   ctx.beginPath();
   ctx.ellipse(0, 0, w / 2, h / 2, 0, 0, Math.PI * 2);
   ctx.fill();
@@ -94,7 +131,7 @@ export function drawPsyduck(
 
   // Arms (Holding Head)
   const armShake = isHeadache ? Math.random() * 2 : 0;
-  ctx.fillStyle = "#FDD835";
+  ctx.fillStyle = primaryColor;
 
   ctx.beginPath();
   ctx.ellipse(-w / 2.2 + armShake, -h / 4, w / 6, h / 4, 0.5, 0, Math.PI * 2);
@@ -107,7 +144,7 @@ export function drawPsyduck(
   ctx.stroke();
 
   // Head
-  ctx.fillStyle = "#FDD835";
+  ctx.fillStyle = primaryColor;
   ctx.beginPath();
   ctx.ellipse(0, -h / 3, w / 2.2, h / 2.2, 0, 0, Math.PI * 2);
   ctx.fill();
@@ -124,7 +161,7 @@ export function drawPsyduck(
   ctx.stroke();
 
   // Beak
-  ctx.fillStyle = "#FFE082";
+  ctx.fillStyle = secondaryColor;
   ctx.beginPath();
   ctx.ellipse(0, -h / 4, w / 3, h / 6, 0, 0, Math.PI * 2);
   ctx.fill();
@@ -241,12 +278,23 @@ export class Duck {
   velocity: number;
   isBeingDragged: boolean;
   spawnX: number; // Random spawn position
+  primaryColor: string;
+  secondaryColor: string;
 
-  constructor(x: number, y: number, isStatic = false, mergeLevel = 0) {
+  constructor(
+    x: number,
+    y: number,
+    isStatic = false,
+    mergeLevel = 0,
+    primaryColor = "#FDD835",
+    secondaryColor = "#FFE082",
+  ) {
     this.spawnX = x;
     this.x = x;
     this.y = y;
     this.mergeLevel = mergeLevel;
+    this.primaryColor = primaryColor;
+    this.secondaryColor = secondaryColor;
     // Size scales with merge level
     const sizeMultiplier = 1 + mergeLevel * 0.3;
     this.w = CONFIG.duckBaseWidth * sizeMultiplier;
@@ -295,7 +343,7 @@ export class Duck {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.scale(this.scaleX, this.scaleY);
-    drawPsyduck(ctx, 0, 0, this.w, this.h, stress, isHeadache);
+    drawPsyduck(ctx, 0, 0, this.w, this.h, stress, isHeadache, this.primaryColor, this.secondaryColor);
 
     // Draw merge level indicator if merged
     if (this.mergeLevel > 0) {

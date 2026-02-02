@@ -6,6 +6,7 @@
 
 <div id="ui-layer">
   <div class="score-container hidden" id="scoreBox">
+    <div class="level-display">LEVEL <span id="levelDisplay">1</span></div>
     <div class="score" id="scoreDisplay">0</div>
     <div class="highscore">BEST: <span id="highScoreDisplay">0</span></div>
     <div class="stability-container">
@@ -21,29 +22,67 @@
     <p style="color: #E1BEE7; font-size: 1.2rem; margin-bottom: 25px; line-height: 1.5;">
       Drag the Psyducks left and right!<br />
       Stack 5 to merge into a bigger duck.<br />
-      Keep the tower balanced!
+      Keep the tower balanced!<br />
+      Fill the screen to level up!
     </p>
+    
+    <div class="seed-container">
+      <label for="seedInput" class="seed-label">Game Seed (optional):</label>
+      <div class="seed-input-group">
+        <input
+          type="text"
+          id="seedInput"
+          class="seed-input"
+          placeholder="cosmic-electric-tower"
+          maxlength="100"
+        />
+        <button class="btn-small" id="shuffleSeedBtn" title="Generate random seed">
+          🎲
+        </button>
+      </div>
+      <p class="seed-hint">
+        Leave empty for random, or enter seed for deterministic gameplay
+      </p>
+    </div>
+    
     <button class="btn" id="startBtn">PLAY</button>
+  </div>
+
+  <div id="level-up-screen" class="hidden">
+    <h1 class="title">LEVEL UP!</h1>
+    <p style="color: #FDD835; font-size: 2rem; margin-bottom: 10px;">
+      Level <span id="newLevelDisplay">2</span>
+    </p>
+    <p style="color: #E1BEE7; font-size: 1.3rem; margin-bottom: 25px;" id="levelName">
+      Pink Paradise
+    </p>
+    <button class="btn" id="continueLevelBtn">CONTINUE</button>
   </div>
 
   <div id="game-over-screen" class="hidden">
     <h1 class="title">OH NO!</h1>
     <p style="color: white; font-size: 1.5rem; margin-bottom: 10px;">
-      Height: <span id="finalScore">0</span> Ducks
+      Level: <span id="finalLevel">1</span> | Height: <span id="finalScore">0</span> Ducks
     </p>
-    <p style="color: #EF5350; font-size: 1.1rem; margin-bottom: 25px;" id="failMessage">
+    <p style="color: #EF5350; font-size: 1.1rem; margin-bottom: 15px;" id="failMessage">
       The headache won.
     </p>
+    <div class="seed-display">
+      <p style="color: #FDD835; font-size: 0.9rem; margin-bottom: 10px;">
+        Seed: <span id="gameOverSeed" class="seed-code">cosmic-tower</span>
+        <button class="btn-copy" id="copySeedBtn" title="Copy seed">📋</button>
+      </p>
+    </div>
     <button class="btn" id="restartBtn">RETRY</button>
   </div>
 </div>
 
 <script>
   import type { GameState } from "@/scripts/game";
-  import { CONFIG, Duck, Particle } from "@/scripts/game";
+  import { CONFIG, Duck, Particle, generateLevelConfigs } from "@/scripts/game";
   import {
     animateGameOver,
-    animateMerge,
+    animateLevelUp,
     animatePerfectText,
     animateScoreUpdate,
     createParticleBurst,
@@ -56,6 +95,7 @@
     playDrop,
     playFail,
     playLand,
+    playLevelUp,
     playMerge,
     playPerfect,
   } from "@/scripts/audio";
@@ -65,24 +105,39 @@
     calculateImbalance,
     restoreWobbleTransform,
   } from "@/scripts/wobble";
+  import { SeededRandom, sanitizeSeed } from "@/scripts/seededRandom";
 
   const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
   const ctx = canvas.getContext("2d", { alpha: false }) as CanvasRenderingContext2D;
   const scoreDisplay = document.getElementById("scoreDisplay") as HTMLElement;
+  const levelDisplay = document.getElementById("levelDisplay") as HTMLElement;
   const highScoreDisplay = document.getElementById("highScoreDisplay") as HTMLElement;
   const scoreBox = document.getElementById("scoreBox") as HTMLElement;
   const startScreen = document.getElementById("start-screen") as HTMLElement;
+  const levelUpScreen = document.getElementById("level-up-screen") as HTMLElement;
+  const newLevelDisplay = document.getElementById("newLevelDisplay") as HTMLElement;
+  const levelNameDisplay = document.getElementById("levelName") as HTMLElement;
   const gameOverScreen = document.getElementById("game-over-screen") as HTMLElement;
   const finalScoreEl = document.getElementById("finalScore") as HTMLElement;
+  const finalLevelEl = document.getElementById("finalLevel") as HTMLElement;
   const failMessageEl = document.getElementById("failMessage") as HTMLElement;
+  const gameOverSeedEl = document.getElementById("gameOverSeed") as HTMLElement;
   const uiLayer = document.getElementById("ui-layer") as HTMLElement;
   const stabilityBar = document.getElementById("stabilityBar") as HTMLElement;
+  const seedInput = document.getElementById("seedInput") as HTMLInputElement;
+  const shuffleSeedBtn = document.getElementById("shuffleSeedBtn") as HTMLElement;
+  const copySeedBtn = document.getElementById("copySeedBtn") as HTMLElement;
 
+  // Initialize with a default RNG (will be replaced on game start)
+  let rng = new SeededRandom();
+  
   // Game State
   const state: GameState = {
     mode: "MENU",
     score: 0,
     highScore: Number.parseInt(localStorage.getItem("psyduck_highscore") || "0"),
+    level: 0,
+    seed: "",
     ducks: [],
     currentDuck: null,
     bgRotation: 0,
@@ -95,11 +150,17 @@
     isDragging: false,
     dragStartX: 0,
     mergeCount: 0,
+    rng: rng,
+    levelConfigs: [],
   };
 
   let lastSpawnTime = 0;
   let touchIdentifier: number | null = null;
   const wobblePhysics = new WobblePhysics();
+
+  function getCurrentLevelConfig() {
+    return state.levelConfigs[Math.min(state.level, state.levelConfigs.length - 1)];
+  }
 
   // --- GAME LOGIC ---
 

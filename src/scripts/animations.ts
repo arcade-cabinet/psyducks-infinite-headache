@@ -256,6 +256,20 @@ export function criticalShake(element: HTMLElement) {
 }
 
 /**
+ * Animate level up screen
+ */
+export function animateLevelUp(element: HTMLElement) {
+  anime({
+    targets: element,
+    scale: [0, 1.2, 1],
+    opacity: [0, 1],
+    rotate: ["-10deg", "10deg", "0deg"],
+    duration: 800,
+    easing: "easeOutElastic(1, .6)",
+  });
+}
+
+/**
  * Continuous floating animation (for title)
  */
 export function floatAnimation(element: HTMLElement) {

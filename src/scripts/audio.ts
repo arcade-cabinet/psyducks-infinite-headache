@@ -181,6 +181,54 @@ export function playMerge() {
 }
 
 /**
+ * Play level up sound - triumphant ascending tone
+ */
+export function playLevelUp() {
+  if (!isInitialized) return;
+
+  // Main triumphant synth
+  const synth1 = new Tone.Synth({
+    oscillator: { type: "triangle" },
+    envelope: {
+      attack: 0.01,
+      decay: 0.2,
+      sustain: 0.3,
+      release: 0.5,
+    },
+  }).toDestination();
+
+  // Harmony synth
+  const synth2 = new Tone.Synth({
+    oscillator: { type: "sine" },
+    envelope: {
+      attack: 0.02,
+      decay: 0.3,
+      sustain: 0.2,
+      release: 0.4,
+    },
+  }).toDestination();
+
+  synth1.volume.value = -8;
+  synth2.volume.value = -12;
+
+  const now = Tone.now();
+
+  // Victory fanfare
+  synth1.triggerAttackRelease("C4", "0.3", now);
+  synth1.triggerAttackRelease("E4", "0.3", now + 0.2);
+  synth1.triggerAttackRelease("G4", "0.3", now + 0.4);
+  synth1.triggerAttackRelease("C5", "0.5", now + 0.6);
+
+  synth2.triggerAttackRelease("G3", "0.8", now);
+  synth2.triggerAttackRelease("C4", "0.6", now + 0.4);
+
+  setTimeout(() => {
+    synth1.dispose();
+    synth2.dispose();
+  }, 1200);
+}
+
+/**
  * Play ambient background music (optional - can be enabled)
  */
 export function playBackgroundMusic(enable = false) {
