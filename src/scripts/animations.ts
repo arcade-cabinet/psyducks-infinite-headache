@@ -1,21 +1,25 @@
 /**
- * Enhanced Animation System using anime.js
+ * Enhanced Animation System using anime.js v4
  */
-// anime.js v4 has complex module export structure requiring type assertion
-// biome-ignore lint/suspicious/noExplicitAny: anime.js v4 module re-export requires runtime default detection
-const anime = ((await import("animejs")) as any).default || (await import("animejs"));
+import { animate, random, remove, stagger } from "animejs";
+
+/**
+ * Cancel all active anime.js animations on a target element
+ */
+export function cancelAnimations(element: HTMLElement) {
+  remove(element);
+}
 
 /**
  * Animate perfect landing text popup
  */
 export function animatePerfectText(element: HTMLElement) {
-  anime({
-    targets: element,
+  animate(element, {
     translateY: [0, -50],
     scale: [0.5, 1.2, 1],
     opacity: [0, 1, 0],
     duration: 1000,
-    easing: "easeOutCubic",
+    ease: "outCubic",
   });
 }
 
@@ -23,11 +27,10 @@ export function animatePerfectText(element: HTMLElement) {
  * Animate score increase with bounce
  */
 export function animateScoreUpdate(element: HTMLElement) {
-  anime({
-    targets: element,
+  animate(element, {
     scale: [1, 1.3, 1],
     duration: 300,
-    easing: "easeOutElastic(1, .5)",
+    ease: "outElastic(1, .5)",
   });
 }
 
@@ -35,12 +38,11 @@ export function animateScoreUpdate(element: HTMLElement) {
  * Animate game over screen entrance
  */
 export function animateGameOver(element: HTMLElement) {
-  anime({
-    targets: element,
+  animate(element, {
     scale: [0, 1],
     opacity: [0, 1],
     duration: 500,
-    easing: "easeOutBack",
+    ease: "outBack",
   });
 }
 
@@ -48,12 +50,11 @@ export function animateGameOver(element: HTMLElement) {
  * Animate start screen entrance
  */
 export function animateStartScreen(element: HTMLElement) {
-  anime({
-    targets: element,
+  animate(element, {
     scale: [0.8, 1],
     opacity: [0, 1],
     duration: 600,
-    easing: "easeOutElastic(1, .6)",
+    ease: "outElastic(1, .6)",
   });
 }
 
@@ -61,11 +62,10 @@ export function animateStartScreen(element: HTMLElement) {
  * Animate button press
  */
 export function animateButtonPress(element: HTMLElement) {
-  return anime({
-    targets: element,
+  return animate(element, {
     scale: [1, 0.95, 1],
     duration: 200,
-    easing: "easeInOutQuad",
+    ease: "inOutQuad",
   });
 }
 
@@ -73,12 +73,11 @@ export function animateButtonPress(element: HTMLElement) {
  * Animate duck squish on landing
  */
 export function animateDuckSquish(element: HTMLElement) {
-  anime({
-    targets: element,
+  animate(element, {
     scaleY: [1, 0.8, 1],
     scaleX: [1, 1.2, 1],
     duration: 400,
-    easing: "easeOutElastic(1, .8)",
+    ease: "outElastic(1, .8)",
   });
 }
 
@@ -86,12 +85,11 @@ export function animateDuckSquish(element: HTMLElement) {
  * Pulse animation for high score
  */
 export function pulseHighScore(element: HTMLElement) {
-  return anime({
-    targets: element,
+  return animate(element, {
     scale: [1, 1.1, 1],
     duration: 800,
     loop: true,
-    easing: "easeInOutQuad",
+    ease: "inOutQuad",
   });
 }
 
@@ -99,8 +97,7 @@ export function pulseHighScore(element: HTMLElement) {
  * Shake animation for game over or near miss
  */
 export function shakeElement(element: HTMLElement, intensity = 5) {
-  anime({
-    targets: element,
+  animate(element, {
     translateX: [
       { value: intensity, duration: 50 },
       { value: -intensity, duration: 50 },
@@ -108,7 +105,7 @@ export function shakeElement(element: HTMLElement, intensity = 5) {
       { value: -intensity / 2, duration: 50 },
       { value: 0, duration: 50 },
     ],
-    easing: "easeInOutQuad",
+    ease: "inOutQuad",
   });
 }
 
@@ -116,11 +113,10 @@ export function shakeElement(element: HTMLElement, intensity = 5) {
  * Fade in element
  */
 export function fadeIn(element: HTMLElement, duration = 300) {
-  anime({
-    targets: element,
+  animate(element, {
     opacity: [0, 1],
     duration,
-    easing: "linear",
+    ease: "linear",
   });
 }
 
@@ -128,25 +124,23 @@ export function fadeIn(element: HTMLElement, duration = 300) {
  * Fade out element
  */
 export function fadeOut(element: HTMLElement, duration = 300) {
-  return anime({
-    targets: element,
+  return animate(element, {
     opacity: [1, 0],
     duration,
-    easing: "linear",
-  }).finished;
+    ease: "linear",
+  }).then();
 }
 
 /**
  * Stagger animation for UI elements
  */
 export function staggerFadeIn(elements: HTMLElement[], delay = 100) {
-  anime({
-    targets: elements,
+  animate(elements, {
     opacity: [0, 1],
     translateY: [20, 0],
     duration: 400,
-    delay: anime.stagger(delay),
-    easing: "easeOutQuad",
+    delay: stagger(delay),
+    ease: "outQuad",
   });
 }
 
@@ -171,18 +165,17 @@ export function createParticleBurst(container: HTMLElement, x: number, y: number
     particles.push(particle);
   }
 
-  anime({
-    targets: particles,
-    translateX: () => anime.random(-100, 100),
-    translateY: () => anime.random(-100, 100),
+  animate(particles, {
+    translateX: () => random(-100, 100),
+    translateY: () => random(-100, 100),
     opacity: [1, 0],
     scale: [1, 0],
     duration: 1000,
-    easing: "easeOutQuad",
-    complete: () => {
-      particles.forEach((p) => {
+    ease: "outQuad",
+    onComplete: () => {
+      for (const p of particles) {
         p.remove();
-      });
+      }
     },
   });
 }
@@ -191,13 +184,12 @@ export function createParticleBurst(container: HTMLElement, x: number, y: number
  * Animate duck merge - scale up with particle burst
  */
 export function animateMerge(element: HTMLElement, callback?: () => void) {
-  anime({
-    targets: element,
+  animate(element, {
     scale: [1, 1.5, 1.3],
     rotate: [0, 360],
     duration: 800,
-    easing: "easeOutElastic(1, .6)",
-    complete: callback,
+    ease: "outElastic(1, .6)",
+    onComplete: callback,
   });
 }
 
@@ -209,15 +201,12 @@ export function animateDucksMerging(
   targetDuck: HTMLElement,
   callback?: () => void,
 ) {
-  // Animate all ducks moving to target
-  anime({
-    targets: ducks,
+  animate(ducks, {
     opacity: [1, 0],
     scale: [1, 0.5],
     duration: 400,
-    easing: "easeInQuad",
-    complete: () => {
-      // Then animate target growing
+    ease: "inQuad",
+    onComplete: () => {
       animateMerge(targetDuck, callback);
     },
   });
@@ -227,13 +216,12 @@ export function animateDucksMerging(
  * Wobble animation for unstable tower warning
  */
 export function wobbleWarning(element: HTMLElement) {
-  return anime({
-    targets: element,
+  return animate(element, {
     rotate: ["-2deg", "2deg"],
     duration: 100,
-    direction: "alternate",
+    alternate: true,
     loop: true,
-    easing: "easeInOutSine",
+    ease: "inOutSine",
   });
 }
 
@@ -241,8 +229,7 @@ export function wobbleWarning(element: HTMLElement) {
  * Shake for critically unstable tower
  */
 export function criticalShake(element: HTMLElement) {
-  anime({
-    targets: element,
+  animate(element, {
     translateX: [
       { value: 10, duration: 40 },
       { value: -10, duration: 40 },
@@ -252,7 +239,7 @@ export function criticalShake(element: HTMLElement) {
       { value: -5, duration: 40 },
       { value: 0, duration: 40 },
     ],
-    easing: "easeInOutQuad",
+    ease: "inOutQuad",
   });
 }
 
@@ -260,13 +247,12 @@ export function criticalShake(element: HTMLElement) {
  * Animate level up screen
  */
 export function animateLevelUp(element: HTMLElement) {
-  anime({
-    targets: element,
+  animate(element, {
     scale: [0, 1.2, 1],
     opacity: [0, 1],
     rotate: ["-10deg", "10deg", "0deg"],
     duration: 800,
-    easing: "easeOutElastic(1, .6)",
+    ease: "outElastic(1, .6)",
   });
 }
 
@@ -274,13 +260,12 @@ export function animateLevelUp(element: HTMLElement) {
  * Continuous floating animation (for title)
  */
 export function floatAnimation(element: HTMLElement) {
-  return anime({
-    targets: element,
+  return animate(element, {
     translateY: [-5, 5],
     rotate: [-1, 1],
     duration: 3000,
     loop: true,
-    direction: "alternate",
-    easing: "easeInOutSine",
+    alternate: true,
+    ease: "inOutSine",
   });
 }

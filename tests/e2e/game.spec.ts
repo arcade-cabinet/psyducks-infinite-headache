@@ -1,18 +1,5 @@
 import { expect, test } from "@playwright/test";
-
-// Helper: wait for the game script module to fully load and attach event handlers.
-// The game script sets data-game-ready="true" on <body> after all handlers are attached.
-async function waitForGameReady(page: import("@playwright/test").Page) {
-  await page.waitForFunction(() => document.body.dataset.gameReady === "true", { timeout: 15000 });
-}
-
-// Helper: click start button and wait for game to begin
-async function startGame(page: import("@playwright/test").Page) {
-  await waitForGameReady(page);
-  await page.locator("#startBtn").click();
-  await expect(page.locator("#start-screen")).toBeHidden({ timeout: 5000 });
-  await expect(page.locator("#scoreBox")).toBeVisible();
-}
+import { expectCanvasRendering, getGameState, startGame, waitForGameReady } from "./helpers";
 
 test.describe("Psyduck's Infinite Headache Game", () => {
   test.beforeEach(async ({ page }) => {
@@ -156,5 +143,102 @@ test.describe("Psyduck's Infinite Headache Game", () => {
       },
       { timeout: 10000 },
     );
+  });
+
+  test("should auto-generate seed on load", async ({ page }) => {
+    await waitForGameReady(page);
+
+    // Seed input should be pre-filled
+    const seedValue = await page.locator("#seedInput").inputValue();
+    expect(seedValue.length).toBeGreaterThan(0);
+
+    // Label should not say "optional"
+    const label = page.locator(".seed-label");
+    await expect(label).toContainText("Game Seed:");
+    const labelText = await label.textContent();
+    expect(labelText).not.toContain("optional");
+  });
+
+  test("should not show black screen on retry", async ({ page }) => {
+    await startGame(page);
+
+    const gameOverScreen = page.locator("#game-over-screen");
+
+    // Force game over by clicking off-center
+    for (let i = 0; i < 8; i++) {
+      await page.locator("#gameCanvas").click({ position: { x: 10, y: 300 } });
+      try {
+        await expect(gameOverScreen).toBeVisible({ timeout: 3000 });
+        break;
+      } catch {
+        // keep trying
+      }
+    }
+
+    // Must reach game over for test to be valid
+    await expect(gameOverScreen).toBeVisible({ timeout: 5000 });
+
+    await page.locator("#restartBtn").click();
+    await expect(gameOverScreen).toBeHidden();
+
+    // Score should be reset
+    await expect(page.locator("#scoreDisplay")).toContainText("0");
+
+    // ScoreBox should be visible (no black screen)
+    await expect(page.locator("#scoreBox")).toBeVisible();
+
+    // Start screen should remain hidden (skip start on retry)
+    await expect(page.locator("#start-screen")).toBeHidden();
+
+    // Canvas should be rendering (not all-black)
+    await expectCanvasRendering(page);
+
+    const mode = await getGameState(page, "mode");
+    expect(mode).toBe("PLAYING");
+  });
+
+  test("should move duck with arrow keys", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name.startsWith("mobile"), "Arrow keys not available on mobile");
+
+    await startGame(page);
+    await page.waitForTimeout(200);
+
+    // Get initial duck position
+    const initialX = await getGameState(page, "currentDuck.x");
+    expect(initialX).toBeDefined();
+    expect(typeof initialX).toBe("number");
+
+    // Press ArrowRight several times
+    for (let i = 0; i < 5; i++) {
+      await page.keyboard.press("ArrowRight");
+      await page.waitForTimeout(50);
+    }
+
+    const afterRightX = await getGameState(page, "currentDuck.x");
+    // Duck may be clamped at right boundary, so check >= (at least didn't move left)
+    expect(afterRightX).toBeGreaterThanOrEqual(initialX);
+
+    // Press ArrowLeft more times to ensure net leftward movement
+    for (let i = 0; i < 10; i++) {
+      await page.keyboard.press("ArrowLeft");
+      await page.waitForTimeout(50);
+    }
+
+    const afterLeftX = await getGameState(page, "currentDuck.x");
+    expect(afterLeftX).toBeLessThan(afterRightX);
+  });
+
+  test("should use full viewport width", async ({ page }) => {
+    await waitForGameReady(page);
+
+    const gameOffsetX = await getGameState(page, "gameOffsetX");
+    expect(gameOffsetX).toBe(0);
+
+    // Canvas should fill viewport width (use offsetWidth to avoid float comparison issues)
+    const canvasWidth = await page.evaluate(() => {
+      return (document.getElementById("gameCanvas") as HTMLCanvasElement).offsetWidth;
+    });
+    const viewportWidth = await page.evaluate(() => window.innerWidth);
+    expect(canvasWidth).toBeCloseTo(viewportWidth, 0);
   });
 });
