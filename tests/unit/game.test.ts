@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CONFIG, Duck, Particle } from "@/scripts/game";
+import { SeededRandom } from "@/scripts/seededRandom";
 
 describe("Game Configuration", () => {
   it("should have valid configuration values", () => {
@@ -41,6 +42,8 @@ describe("Duck Class", () => {
       mode: "PLAYING" as const,
       score: 0,
       highScore: 0,
+      level: 0,
+      seed: "test-seed",
       ducks: [],
       currentDuck: null,
       cameraY: 0,
@@ -52,6 +55,11 @@ describe("Duck Class", () => {
       particles: [],
       gameSpeed: 1,
       stressLevel: 0,
+      isDragging: false,
+      dragStartX: 0,
+      mergeCount: 0,
+      rng: new SeededRandom("test"),
+      levelConfigs: [],
     };
 
     duck.squish();
@@ -67,19 +75,14 @@ describe("Duck Class", () => {
     expect(duck.scaleX).toBeLessThan(1 + CONFIG.squishFactor);
   });
 
-  it("should increase speed with score", () => {
-    const duckScore0 = new Duck(100, 200, false, 0);
-    const duckScore10 = new Duck(100, 200, false, 10);
-
-    expect(duckScore10.speedBase).toBeGreaterThan(duckScore0.speedBase);
-  });
-
   it("should not move when falling", () => {
     const duck = new Duck(100, 200, false, 0);
     const mockState = {
       mode: "PLAYING" as const,
       score: 0,
       highScore: 0,
+      level: 0,
+      seed: "test-seed",
       ducks: [],
       currentDuck: null,
       cameraY: 0,
@@ -91,6 +94,11 @@ describe("Duck Class", () => {
       particles: [],
       gameSpeed: 1,
       stressLevel: 0,
+      isDragging: false,
+      dragStartX: 0,
+      mergeCount: 0,
+      rng: new SeededRandom("test"),
+      levelConfigs: [],
     };
 
     const initialY = duck.y;

@@ -23,6 +23,8 @@ export interface GameState {
   mergeCount: number;
   rng: any; // SeededRandom instance
   levelConfigs: LevelConfig[];
+  cameraY: number;
+  targetCameraY: number;
 }
 
 export interface LevelConfig {
@@ -59,6 +61,8 @@ export function generateLevelConfigs(seededRandom: any, count = 10): LevelConfig
 export interface Config {
   duckBaseWidth: number;
   duckBaseHeight: number;
+  duckWidth: number;
+  duckHeight: number;
   gravity: number;
   perfectTolerance: number;
   hitTolerance: number;
@@ -71,6 +75,8 @@ export interface Config {
 export const CONFIG: Config = {
   duckBaseWidth: 80,
   duckBaseHeight: 70,
+  duckWidth: 80,
+  duckHeight: 70,
   gravity: 3, // Slower fall for dragging
   perfectTolerance: 8,
   hitTolerance: 0.65,
