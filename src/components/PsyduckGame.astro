@@ -157,7 +157,7 @@
     dragStartX: 0,
     mergeCount: 0,
     rng: rng,
-    levelConfigs: [],
+    levelConfigs: generateLevelConfigs(rng, 20),
     cameraY: 0,
     targetCameraY: 0,
     viewportWidth: window.innerWidth,
@@ -265,11 +265,11 @@
     state.mode = "PLAYING";
     scoreDisplay.textContent = state.score.toString();
 
-    fadeOut(startScreen, 300).then(() => startScreen.classList.add("hidden"));
-    fadeOut(levelUpScreen, 300).then(() => levelUpScreen.classList.add("hidden"));
+    startScreen.classList.add("hidden");
+    levelUpScreen.classList.add("hidden");
+    gameOverScreen.classList.add("hidden");
     scoreBox.classList.remove("hidden");
     fadeIn(scoreBox, 300);
-    gameOverScreen.classList.add("hidden");
 
     if (stabilityBar) {
       stabilityBar.style.width = "100%";
@@ -486,7 +486,7 @@
 
   function inputHandler(e: MouseEvent | TouchEvent | KeyboardEvent) {
     if (
-      e.type === "click" ||
+      e.type === "mousedown" ||
       e.type === "touchstart" ||
       (e instanceof KeyboardEvent && e.code === "Space")
     ) {
@@ -786,4 +786,7 @@
   ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
   drawBackground(); // Draw once before loop starts
   loop(); // Start loop immediately so background animates
+
+  // Signal that the game module has fully loaded
+  document.body.dataset.gameReady = "true";
 </script>

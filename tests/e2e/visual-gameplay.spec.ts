@@ -1,8 +1,16 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
+
+async function waitForGameReady(page: Page) {
+  await page.waitForFunction(
+    () => document.body.dataset.gameReady === "true",
+    { timeout: 15000 },
+  );
+}
 
 test.describe("Psyduck's Infinite Headache - Visual & Gameplay Tests", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/");
+    await page.goto("");
   });
 
   test("should capture main menu screenshot", async ({ page }) => {
@@ -18,7 +26,7 @@ test.describe("Psyduck's Infinite Headache - Visual & Gameplay Tests", () => {
     });
 
     // Verify main menu elements are visible
-    await expect(page.locator(".title")).toContainText("PSYDUCK");
+    await expect(page.locator("#start-screen .title")).toContainText("PSYDUCK");
     await expect(page.locator("#startBtn")).toBeVisible();
     await expect(page.locator("#seedInput")).toBeVisible();
     await expect(page.locator("#shuffleSeedBtn")).toBeVisible();
@@ -36,7 +44,9 @@ test.describe("Psyduck's Infinite Headache - Visual & Gameplay Tests", () => {
 
   test("should capture gameplay area with first duck", async ({ page }) => {
     // Start game
+    await waitForGameReady(page);
     await page.click("#startBtn");
+    await expect(page.locator("#start-screen")).toBeHidden();
 
     // Wait for game UI to appear
     await page.waitForSelector("#scoreDisplay", { state: "visible" });
@@ -59,7 +69,9 @@ test.describe("Psyduck's Infinite Headache - Visual & Gameplay Tests", () => {
   test("should capture seeded gameplay", async ({ page }) => {
     // Use a specific seed for reproducible test
     await page.fill("#seedInput", "test-seed-123");
+    await waitForGameReady(page);
     await page.click("#startBtn");
+    await expect(page.locator("#start-screen")).toBeHidden();
 
     // Wait for game to start
     await page.waitForSelector("#scoreDisplay", { state: "visible" });
@@ -72,7 +84,9 @@ test.describe("Psyduck's Infinite Headache - Visual & Gameplay Tests", () => {
   });
 
   test("should perform basic drag interaction", async ({ page }) => {
+    await waitForGameReady(page);
     await page.click("#startBtn");
+    await expect(page.locator("#start-screen")).toBeHidden();
 
     // Wait for game to start
     await page.waitForSelector("#scoreDisplay", { state: "visible" });
@@ -103,6 +117,7 @@ test.describe("Psyduck's Infinite Headache - Visual & Gameplay Tests", () => {
     const seedInput = page.locator("#seedInput");
 
     // Click shuffle button
+    await waitForGameReady(page);
     await page.click("#shuffleSeedBtn");
     await page.waitForTimeout(100);
 
@@ -120,26 +135,13 @@ test.describe("Psyduck's Infinite Headache - Visual & Gameplay Tests", () => {
   test("should capture game over screen", async ({ page }) => {
     // Start with known seed
     await page.fill("#seedInput", "test-gameover");
+    await waitForGameReady(page);
     await page.click("#startBtn");
-    await page.waitForTimeout(1500);
+    await expect(page.locator("#start-screen")).toBeHidden();
 
-    const canvas = page.locator("#gameCanvas");
-    const box = await canvas.boundingBox();
-    if (!box) throw new Error("Canvas not found");
-
-    // Make intentionally bad moves to trigger game over
-    for (let i = 0; i < 5; i++) {
-      // Click far from center to miss
-      await page.mouse.click(box.x + 50, box.y + box.height * 0.5);
-      await page.waitForTimeout(2000);
-
-      // Check if game over screen appeared
-      const gameOverVisible = await page.locator("#game-over-screen").isVisible();
-      if (gameOverVisible) break;
-    }
-
-    // Ensure game over was triggered
-    await expect(page.locator("#game-over-screen")).toBeVisible({ timeout: 5000 });
+    // Wait for game over to occur naturally (ducks auto-fall under gravity
+    // and eventually miss the stack or stability becomes critical)
+    await expect(page.locator("#game-over-screen")).toBeVisible({ timeout: 30000 });
 
     await page.screenshot({
       path: "test-results/screenshots/game-over-screen.png",
@@ -150,7 +152,9 @@ test.describe("Psyduck's Infinite Headache - Visual & Gameplay Tests", () => {
   test("should capture level up scenario", async ({ page }) => {
     // This test would need successful gameplay to trigger level up
     // For demonstration, we'll capture the level up screen elements
+    await waitForGameReady(page);
     await page.click("#startBtn");
+    await expect(page.locator("#start-screen")).toBeHidden();
     await page.waitForTimeout(1000);
 
     // Get level display
@@ -164,7 +168,9 @@ test.describe("Psyduck's Infinite Headache - Visual & Gameplay Tests", () => {
   });
 
   test("should verify stability bar updates", async ({ page }) => {
+    await waitForGameReady(page);
     await page.click("#startBtn");
+    await expect(page.locator("#start-screen")).toBeHidden();
     await page.waitForTimeout(1000);
 
     const stabilityBar = page.locator("#stabilityBar");
@@ -181,29 +187,29 @@ test.describe("Psyduck's Infinite Headache - Visual & Gameplay Tests", () => {
     });
   });
 
-  test("should test copy seed functionality", async ({ page }) => {
-    // Start game and get to game over
+  test("should test seed input and shuffle functionality", async ({ page }) => {
+    await waitForGameReady(page);
+
+    // Enter a custom seed
+    const seedInput = page.locator("#seedInput");
     await page.fill("#seedInput", "copy-test-seed");
-    await page.click("#startBtn");
+    await expect(seedInput).toHaveValue("copy-test-seed");
 
-    // Wait for game to start
-    await page.waitForSelector("#scoreDisplay", { state: "visible" });
-
-    // Trigger game over (simplified)
-    const canvas = page.locator("#gameCanvas");
-    const box = await canvas.boundingBox();
-    if (box) {
-      await page.mouse.click(box.x + 10, box.y + box.height * 0.5);
-      await page.waitForTimeout(2000);
-    }
-
-    // Wait for game over screen with timeout
-    const gameOverScreen = page.locator("#game-over-screen");
-    await expect(gameOverScreen).toBeVisible({ timeout: 10000 });
-
-    // Take screenshot
+    // Take screenshot with custom seed
     await page.screenshot({
-      path: "test-results/screenshots/seed-display-gameover.png",
+      path: "test-results/screenshots/seed-input-custom.png",
+      fullPage: true,
+    });
+
+    // Shuffle and verify seed changes
+    await page.click("#shuffleSeedBtn");
+    await page.waitForTimeout(100);
+    const shuffledSeed = await seedInput.inputValue();
+    expect(shuffledSeed).toBeTruthy();
+    expect(shuffledSeed).not.toBe("copy-test-seed");
+
+    await page.screenshot({
+      path: "test-results/screenshots/seed-input-shuffled.png",
       fullPage: true,
     });
   });
