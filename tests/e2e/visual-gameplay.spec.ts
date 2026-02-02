@@ -2,10 +2,7 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
 async function waitForGameReady(page: Page) {
-  await page.waitForFunction(
-    () => document.body.dataset.gameReady === "true",
-    { timeout: 15000 },
-  );
+  await page.waitForFunction(() => document.body.dataset.gameReady === "true", { timeout: 15000 });
 }
 
 test.describe("Psyduck's Infinite Headache - Visual & Gameplay Tests", () => {

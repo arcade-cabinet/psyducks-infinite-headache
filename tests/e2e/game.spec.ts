@@ -3,10 +3,7 @@ import { expect, test } from "@playwright/test";
 // Helper: wait for the game script module to fully load and attach event handlers.
 // The game script sets data-game-ready="true" on <body> after all handlers are attached.
 async function waitForGameReady(page: import("@playwright/test").Page) {
-  await page.waitForFunction(
-    () => document.body.dataset.gameReady === "true",
-    { timeout: 15000 },
-  );
+  await page.waitForFunction(() => document.body.dataset.gameReady === "true", { timeout: 15000 });
 }
 
 // Helper: click start button and wait for game to begin
@@ -139,7 +136,7 @@ test.describe("Psyduck's Infinite Headache Game", () => {
     await expect(themeColor).toHaveAttribute("content", "#4A148C");
   });
 
-  test("should support keyboard input (Space key)", async ({ page, browserName }, testInfo) => {
+  test("should support keyboard input (Space key)", async ({ page }, testInfo) => {
     // Skip on mobile (no keyboard) and Firefox headless (throttled rAF makes gravity too slow)
     test.skip(
       testInfo.project.name.startsWith("mobile") || testInfo.project.name === "firefox",
