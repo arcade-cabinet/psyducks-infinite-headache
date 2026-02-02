@@ -26,6 +26,11 @@ export interface GameState {
   levelConfigs: LevelConfig[];
   cameraY: number;
   targetCameraY: number;
+  viewportWidth: number;
+  viewportHeight: number;
+  scale: number;
+  dpr: number;
+  gameOffsetX: number;
 }
 
 export interface LevelConfig {

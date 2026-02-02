@@ -106,6 +106,10 @@
   } from "@/scripts/wobble";
   import { SeededRandom, sanitizeSeed } from "@/scripts/seededRandom";
 
+  // Responsive scaling constants
+  const DESIGN_WIDTH = 412;
+  const MAX_GAME_WIDTH = 600;
+
   const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
   const ctx = canvas.getContext("2d", { alpha: false }) as CanvasRenderingContext2D;
   const scoreDisplay = document.getElementById("scoreDisplay") as HTMLElement;
@@ -156,6 +160,11 @@
     levelConfigs: [],
     cameraY: 0,
     targetCameraY: 0,
+    viewportWidth: window.innerWidth,
+    viewportHeight: window.innerHeight,
+    scale: 1,
+    dpr: window.devicePixelRatio || 1,
+    gameOffsetX: 0,
   };
 
   const wobblePhysics = new WobblePhysics();
@@ -167,13 +176,39 @@
   // --- GAME LOGIC ---
 
   function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    state.width = canvas.width;
-    state.height = canvas.height;
+    const dpr = window.devicePixelRatio || 1;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // Set canvas to full physical resolution for crisp rendering
+    canvas.width = vw * dpr;
+    canvas.height = vh * dpr;
+
+    // Compute game area scaling
+    const effectiveWidth = Math.min(vw, MAX_GAME_WIDTH);
+    const scale = effectiveWidth / DESIGN_WIDTH;
+
+    state.viewportWidth = vw;
+    state.viewportHeight = vh;
+    state.scale = scale;
+    state.dpr = dpr;
+    state.gameOffsetX = (vw - effectiveWidth) / 2;
+
+    // Game logic uses fixed design-space coordinates
+    state.width = DESIGN_WIDTH;
+    state.height = vh / scale;
     state.baseY = state.height - 100;
   }
   window.addEventListener("resize", resize);
+
+  /** Convert screen (CSS pixel) coordinates to design-space coordinates */
+  function screenToDesign(clientX: number, clientY: number) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (clientX - rect.left - state.gameOffsetX) / state.scale,
+      y: (clientY - rect.top) / state.scale,
+    };
+  }
 
   function initGame(continueFromLevel = false) {
     resize();
@@ -266,7 +301,7 @@
     const el = document.createElement("div");
     el.className = "perfect-text";
     el.textContent = "PERFECT!";
-    el.style.left = `${state.width / 2}px`;
+    el.style.left = `${state.viewportWidth / 2}px`;
     el.style.top = "20%";
     uiLayer.appendChild(el);
     
@@ -468,12 +503,11 @@
   function startDrag(clientX: number, clientY: number, identifier?: number) {
     if (state.mode !== "PLAYING" || !state.currentDuck || state.currentDuck.isFalling) return;
 
-    const rect = canvas.getBoundingClientRect();
-    const x = clientX - rect.left;
-    const y = clientY - rect.top + state.cameraY;
+    const { x, y } = screenToDesign(clientX, clientY);
+    const worldY = y + state.cameraY;
 
     // Check if touch is on current duck's tummy
-    if (state.currentDuck.containsPoint(x, y)) {
+    if (state.currentDuck.containsPoint(x, worldY)) {
       state.isDragging = true;
       state.dragStartX = x - state.currentDuck.x;
       state.currentDuck.isBeingDragged = true;
@@ -486,10 +520,9 @@
   function updateDrag(clientX: number, _clientY: number) {
     if (!state.isDragging || !state.currentDuck) return;
 
-    const rect = canvas.getBoundingClientRect();
-    const x = clientX - rect.left;
+    const { x } = screenToDesign(clientX, 0);
 
-    // Update duck position, constrained to screen bounds
+    // Update duck position, constrained to game area bounds
     const halfWidth = state.currentDuck.w / 2;
     state.currentDuck.x = Math.max(halfWidth, Math.min(state.width - halfWidth, x - state.dragStartX));
   }
@@ -507,20 +540,23 @@
   // --- RENDER LOOP ---
 
   function drawBackground() {
+    const vw = state.viewportWidth;
+    const vh = state.viewportHeight;
     const levelConfig = getCurrentLevelConfig();
-    // Background color based on level
+
+    // Background color fills entire viewport
     ctx.fillStyle = levelConfig.color;
-    ctx.fillRect(0, 0, state.width, state.height);
+    ctx.fillRect(0, 0, vw, vh);
 
     ctx.save();
-    ctx.translate(state.width / 2, state.height / 2);
+    ctx.translate(vw / 2, vh / 2);
 
     // Rotate background based on score/stress
     state.bgRotation += 0.002 + state.score * 0.0005;
     ctx.rotate(state.bgRotation);
 
     // Spiral with level colors
-    const maxDim = Math.max(state.width, state.height) * 1.5;
+    const maxDim = Math.max(vw, vh) * 1.5;
     const gradient = ctx.createRadialGradient(0, 0, 10, 0, 0, maxDim);
     gradient.addColorStop(0, levelConfig.secondaryColor);
     gradient.addColorStop(0.5, levelConfig.color);
@@ -536,7 +572,7 @@
       ctx.beginPath();
       // Pulsing rings
       const pulse = Math.sin(Date.now() / 1000) * 20;
-      const radius = Math.max(0, i * 120 + pulse); // Fix: Ensure radius is not negative
+      const radius = Math.max(0, i * 120 + pulse);
       ctx.arc(0, 0, radius, 0, Math.PI * 2);
       ctx.stroke();
     }
@@ -593,14 +629,20 @@
       if (p.life <= 0) state.particles.splice(i, 1);
     }
 
-    // Draw
-    ctx.clearRect(0, 0, state.width, state.height);
+    // Draw - reset transform and clear full physical canvas
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // Apply DPR scaling for viewport-space rendering
+    ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+
+    // Background fills entire viewport
     drawBackground();
 
+    // Game area transform: offset to center + scale to design space + camera
     ctx.save();
-    // Camera Transform: We shift the world up (negative Y) relative to cameraY
-    // Since cameraY represents the top-left Y of the viewport in world space
+    ctx.translate(state.gameOffsetX, 0);
+    ctx.scale(state.scale, state.scale);
     ctx.translate(0, -state.cameraY);
 
     // Apply wobble transform to tower
@@ -741,6 +783,7 @@
 
   // Initialize view
   resize();
+  ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
   drawBackground(); // Draw once before loop starts
   loop(); // Start loop immediately so background animates
 </script>
