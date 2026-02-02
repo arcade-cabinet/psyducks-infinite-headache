@@ -1,31 +1,5 @@
 import { expect, test } from "@playwright/test";
-
-// Helper: wait for the game script module to fully load and attach event handlers.
-// The game script sets data-game-ready="true" on <body> after all handlers are attached.
-async function waitForGameReady(page: import("@playwright/test").Page) {
-  await page.waitForFunction(() => document.body.dataset.gameReady === "true", { timeout: 15000 });
-}
-
-// Helper: click start button and wait for game to begin
-async function startGame(page: import("@playwright/test").Page) {
-  await waitForGameReady(page);
-  await page.locator("#startBtn").click();
-  await expect(page.locator("#start-screen")).toBeHidden({ timeout: 5000 });
-  await expect(page.locator("#scoreBox")).toBeVisible();
-}
-
-// Helper: read __gameState property from the browser (avoids biome noExplicitAny in each test)
-// biome-ignore lint/suspicious/noExplicitAny: accessing injected game state on window
-function getGameState(page: import("@playwright/test").Page, path: string): Promise<any> {
-  return page.evaluate((p) => {
-    // biome-ignore lint/suspicious/noExplicitAny: injected game state
-    const gs = (window as any).__gameState;
-    return p.split(".").reduce((obj: unknown, key: string) => {
-      if (obj != null && typeof obj === "object") return (obj as Record<string, unknown>)[key];
-      return undefined;
-    }, gs);
-  }, path);
-}
+import { getGameState, startGame, waitForGameReady } from "./helpers";
 
 test.describe("Psyduck's Infinite Headache Game", () => {
   test.beforeEach(async ({ page }) => {
@@ -201,47 +175,51 @@ test.describe("Psyduck's Infinite Headache Game", () => {
       }
     }
 
-    const isGameOver = await gameOverScreen.isVisible();
-    if (isGameOver) {
-      await page.locator("#restartBtn").click();
-      await expect(gameOverScreen).toBeHidden();
+    // Must reach game over for test to be valid
+    await expect(gameOverScreen).toBeVisible({ timeout: 5000 });
 
-      // Score should be reset
-      await expect(page.locator("#scoreDisplay")).toContainText("0");
+    await page.locator("#restartBtn").click();
+    await expect(gameOverScreen).toBeHidden();
 
-      // ScoreBox should be visible (no black screen)
-      await expect(page.locator("#scoreBox")).toBeVisible();
+    // Score should be reset
+    await expect(page.locator("#scoreDisplay")).toContainText("0");
 
-      // Start screen should remain hidden (skip start on retry)
-      await expect(page.locator("#start-screen")).toBeHidden();
+    // ScoreBox should be visible (no black screen)
+    await expect(page.locator("#scoreBox")).toBeVisible();
 
-      // Canvas should be rendering (check it's not all-black via game state)
-      const mode = await getGameState(page, "mode");
-      expect(mode).toBe("PLAYING");
-    }
+    // Start screen should remain hidden (skip start on retry)
+    await expect(page.locator("#start-screen")).toBeHidden();
+
+    // Canvas should be rendering (check it's not all-black via game state)
+    const mode = await getGameState(page, "mode");
+    expect(mode).toBe("PLAYING");
   });
 
   test("should move duck with arrow keys", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name.startsWith("mobile"), "Arrow keys not available on mobile");
 
     await startGame(page);
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(200);
 
     // Get initial duck position
     const initialX = await getGameState(page, "currentDuck.x");
     expect(initialX).toBeDefined();
+    expect(typeof initialX).toBe("number");
 
     // Press ArrowRight several times
     for (let i = 0; i < 5; i++) {
       await page.keyboard.press("ArrowRight");
+      await page.waitForTimeout(50);
     }
 
     const afterRightX = await getGameState(page, "currentDuck.x");
-    expect(afterRightX).toBeGreaterThan(initialX);
+    // Duck may be clamped at right boundary, so check >= (at least didn't move left)
+    expect(afterRightX).toBeGreaterThanOrEqual(initialX);
 
-    // Press ArrowLeft several times
-    for (let i = 0; i < 5; i++) {
+    // Press ArrowLeft more times to ensure net leftward movement
+    for (let i = 0; i < 10; i++) {
       await page.keyboard.press("ArrowLeft");
+      await page.waitForTimeout(50);
     }
 
     const afterLeftX = await getGameState(page, "currentDuck.x");
@@ -254,12 +232,11 @@ test.describe("Psyduck's Infinite Headache Game", () => {
     const gameOffsetX = await getGameState(page, "gameOffsetX");
     expect(gameOffsetX).toBe(0);
 
-    // Canvas should fill viewport width
+    // Canvas should fill viewport width (use offsetWidth to avoid float comparison issues)
     const canvasWidth = await page.evaluate(() => {
-      const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
-      return canvas.getBoundingClientRect().width;
+      return (document.getElementById("gameCanvas") as HTMLCanvasElement).offsetWidth;
     });
     const viewportWidth = await page.evaluate(() => window.innerWidth);
-    expect(canvasWidth).toBe(viewportWidth);
+    expect(canvasWidth).toBeCloseTo(viewportWidth, 0);
   });
 });

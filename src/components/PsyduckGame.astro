@@ -624,9 +624,9 @@
   function loop() {
     // Update
     if (state.mode === "PLAYING") {
-      // Apply gyroscope tilt to current duck
+      // Apply gyroscope tilt to current duck (works while falling, like drag does)
       const gyro = getGyroState();
-      if (gyro.active && state.currentDuck && !state.currentDuck.isFalling) {
+      if (gyro.active && state.currentDuck && !state.currentDuck.isStatic) {
         const tiltSpeed = 4; // Design-space pixels per frame at full tilt
         const halfW = state.currentDuck.w / 2;
         state.currentDuck.x += gyro.tiltX * tiltSpeed;
@@ -730,8 +730,8 @@
   window.addEventListener("keydown", (e) => {
     if (e.code === "Space") inputHandler(e);
 
-    // Arrow key movement
-    if (state.mode === "PLAYING" && state.currentDuck && !state.currentDuck.isFalling) {
+    // Arrow key movement (works while duck is falling, like drag does)
+    if (state.mode === "PLAYING" && state.currentDuck && !state.currentDuck.isStatic) {
       const halfW = state.currentDuck.w / 2;
       if (e.code === "ArrowLeft") {
         state.currentDuck.x = Math.max(halfW, state.currentDuck.x - ARROW_MOVE_PX);
@@ -870,7 +870,10 @@
   drawBackground(); // Draw once before loop starts
   loop(); // Start loop immediately so background animates
 
-  // Expose game state for E2E test assertions
+  // Expose game state for E2E test assertions.
+  // This is a client-side game with no sensitive data — the state is already
+  // visible in the canvas and DOM. E2E tests run against the production build
+  // (astro preview), so gating behind DEV would break them.
   (window as any).__gameState = state;
 
   // Update control hints based on detected input method

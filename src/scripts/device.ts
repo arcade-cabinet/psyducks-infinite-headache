@@ -131,7 +131,7 @@ export async function initGyroscope(): Promise<boolean> {
  * Get current gyroscope tilt state
  */
 export function getGyroState(): GyroState {
-  return gyroState;
+  return { ...gyroState };
 }
 
 /**
