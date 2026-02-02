@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 import * as YUKA from "yuka";
-import { getGameState, startGame, waitForGameReady } from "./helpers";
+import { expectCanvasRendering, getGameState, startGame, waitForGameReady } from "./helpers";
 
 /**
  * AI-Controlled Gameplay Test using Yuka
@@ -286,6 +286,9 @@ test.describe("AI-Controlled Gameplay Tests", () => {
 
     // Score should be reset to 0
     await expect(page.locator("#scoreDisplay")).toContainText("0");
+
+    // Canvas should be rendering (not all-black)
+    await expectCanvasRendering(page);
 
     // Game mode should be PLAYING
     const mode = await getGameState(page, "mode");

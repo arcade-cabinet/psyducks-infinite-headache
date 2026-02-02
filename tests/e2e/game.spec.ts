@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { getGameState, startGame, waitForGameReady } from "./helpers";
+import { expectCanvasRendering, getGameState, startGame, waitForGameReady } from "./helpers";
 
 test.describe("Psyduck's Infinite Headache Game", () => {
   test.beforeEach(async ({ page }) => {
@@ -190,7 +190,9 @@ test.describe("Psyduck's Infinite Headache Game", () => {
     // Start screen should remain hidden (skip start on retry)
     await expect(page.locator("#start-screen")).toBeHidden();
 
-    // Canvas should be rendering (check it's not all-black via game state)
+    // Canvas should be rendering (not all-black)
+    await expectCanvasRendering(page);
+
     const mode = await getGameState(page, "mode");
     expect(mode).toBe("PLAYING");
   });
