@@ -281,9 +281,80 @@ html {
   display: none;
 }
 
+.btn-help {
+  pointer-events: auto;
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #7b1fa2;
+  color: #fdd835;
+  border: 3px solid #fdd835;
+  font-size: 1.5rem;
+  font-family: "Fredoka One", cursive;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 0 #4a148c;
+  transition: all 0.1s;
+  z-index: 10;
+}
+
+.btn-help:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #4a148c;
+}
+
+.btn-help:hover {
+  background: #9c27b0;
+}
+
+#help-screen {
+  background: rgba(74, 20, 140, 0.95);
+  padding: 30px;
+  border-radius: 30px;
+  border: 6px solid #fdd835;
+  pointer-events: auto;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  max-width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.help-items {
+  text-align: left;
+  margin: 20px 0;
+}
+
+.help-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+  color: #e1bee7;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.help-item strong {
+  color: #fdd835;
+}
+
+.help-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  width: 32px;
+  text-align: center;
+}
+
 #start-screen,
 #game-over-screen,
 #level-up-screen {
+  position: relative;
   background: rgba(74, 20, 140, 0.9);
   padding: 40px;
   border-radius: 30px;
@@ -345,7 +416,8 @@ html {
   }
   #start-screen,
   #game-over-screen,
-  #level-up-screen {
+  #level-up-screen,
+  #help-screen {
     padding: 15px;
   }
   .seed-container {
@@ -361,6 +433,12 @@ html {
   }
   .perfect-text {
     font-size: 1.5rem;
+  }
+  .help-item {
+    font-size: 0.9rem;
+  }
+  .help-icon {
+    font-size: 1.2rem;
   }
 }
 
@@ -378,7 +456,8 @@ html {
   }
   #start-screen,
   #game-over-screen,
-  #level-up-screen {
+  #level-up-screen,
+  #help-screen {
     padding: 25px;
   }
 }
@@ -387,7 +466,8 @@ html {
 @media (min-width: 601px) {
   #start-screen,
   #game-over-screen,
-  #level-up-screen {
+  #level-up-screen,
+  #help-screen {
     max-width: 500px;
     padding: 40px;
   }
@@ -405,7 +485,8 @@ html {
   }
   #start-screen,
   #game-over-screen,
-  #level-up-screen {
+  #level-up-screen,
+  #help-screen {
     padding: 15px;
     max-height: 90vh;
   }
