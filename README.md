@@ -94,7 +94,6 @@ pnpm check
 
 ```text
 ├── .github/
-├── .github/
 │   └── workflows/          # CI/CD pipelines
 │       ├── ci.yml         # Continuous Integration
 │       └── cd.yml         # Deployment to GitHub Pages

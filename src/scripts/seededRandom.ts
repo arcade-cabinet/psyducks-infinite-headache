@@ -105,12 +105,11 @@ export class SeededRandom {
    */
   private generateRandomSeed(): string {
     const words = [];
-    const mathRandom = Math.random;
 
     // Use Math.random for initial seed generation only
-    words.push(ADJECTIVES[Math.floor(mathRandom() * ADJECTIVES.length)]);
-    words.push(ADJECTIVES[Math.floor(mathRandom() * ADJECTIVES.length)]);
-    words.push(NOUNS[Math.floor(mathRandom() * NOUNS.length)]);
+    words.push(ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)]);
+    words.push(ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)]);
+    words.push(NOUNS[Math.floor(Math.random() * NOUNS.length)]);
 
     return words.join("-").toLowerCase();
   }
