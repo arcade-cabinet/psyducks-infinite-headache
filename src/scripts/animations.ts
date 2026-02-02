@@ -1,12 +1,9 @@
 /**
  * Enhanced Animation System using anime.js
  */
-import type * as animeModule from "animejs";
-
-// anime.js v4 exports differently - access the default function
-const anime =
-  // biome-ignore lint/suspicious/noExplicitAny: anime.js complex module export requires type assertion
-  ((await import("animejs")) as typeof animeModule as any).default || (await import("animejs"));
+// anime.js v4 has complex module export structure requiring type assertion
+// biome-ignore lint/suspicious/noExplicitAny: anime.js v4 module re-export requires runtime default detection
+const anime = ((await import("animejs")) as any).default || (await import("animejs"));
 
 /**
  * Animate perfect landing text popup
