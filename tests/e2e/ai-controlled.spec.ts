@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 import * as YUKA from "yuka";
 
@@ -16,8 +17,6 @@ interface DuckTarget {
 class AIPlayer {
   private entityManager: YUKA.EntityManager;
   private vehicle: YUKA.Vehicle;
-  // biome-ignore lint/correctness/noUnusedPrivateClassMembers: Used for AI simulation tracking
-  private time: number;
 
   constructor() {
     this.entityManager = new YUKA.EntityManager();
@@ -25,7 +24,6 @@ class AIPlayer {
     this.vehicle.maxSpeed = 5;
     this.vehicle.maxForce = 10;
     this.entityManager.add(this.vehicle);
-    this.time = 0;
   }
 
   /**
@@ -68,13 +66,61 @@ class AIPlayer {
   }
 
   update(deltaTime: number) {
-    this.time += deltaTime;
     this.entityManager.update(deltaTime);
   }
 }
 
+/**
+ * Helper function to perform a single AI duck drop attempt
+ * Returns true if the drop was successful (score increased)
+ */
+async function performAIDuckDrop(
+  page: Page,
+  ai: AIPlayer,
+  box: { x: number; y: number; width: number; height: number },
+): Promise<boolean> {
+  // Get current score
+  const scoreBefore = await page.locator("#scoreDisplay").textContent();
+
+  // AI observes the game state (simplified - in real scenario would use computer vision)
+  const duckStartX = box.x + box.width * 0.5; // Assume duck starts at center
+  const targetX = box.x + box.width * 0.5; // Target: stack center
+
+  // AI decides optimal position
+  const optimalX = ai.calculateOptimalDrop(
+    { x: targetX, y: box.y + box.height * 0.7, width: 80, height: 70 },
+    box.width,
+  );
+
+  // AI performs drag if needed
+  if (ai.shouldDrag(duckStartX, optimalX, 30)) {
+    const dragPath = ai.calculateDragPath(duckStartX, optimalX, 15);
+
+    await page.mouse.move(duckStartX, box.y + box.height * 0.3);
+    await page.mouse.down();
+
+    // Follow calculated path
+    for (const x of dragPath) {
+      await page.mouse.move(x, box.y + box.height * 0.3);
+      await page.waitForTimeout(20);
+    }
+
+    await page.mouse.up();
+  }
+
+  // Wait for duck to land
+  await page.waitForTimeout(2000);
+
+  // Check if score increased
+  const scoreAfter = await page.locator("#scoreDisplay").textContent();
+  return (
+    scoreAfter !== null &&
+    scoreBefore !== null &&
+    Number.parseInt(scoreAfter, 10) > Number.parseInt(scoreBefore, 10)
+  );
+}
+
 test.describe("AI-Controlled Gameplay Tests", () => {
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Test complexity is acceptable
   test("AI should successfully play several rounds", async ({ page }) => {
     const ai = new AIPlayer();
 
@@ -95,49 +141,13 @@ test.describe("AI-Controlled Gameplay Tests", () => {
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
-        // Get current score
-        const scoreBefore = await page.locator("#scoreDisplay").textContent();
-
-        // AI observes the game state (simplified - in real scenario would use computer vision)
-        const duckStartX = box.x + box.width * 0.5; // Assume duck starts at center
-        const targetX = box.x + box.width * 0.5; // Target: stack center
-
-        // AI decides optimal position
-        const optimalX = ai.calculateOptimalDrop(
-          { x: targetX, y: box.y + box.height * 0.7, width: 80, height: 70 },
-          box.width,
-        );
-
-        // AI performs drag if needed
-        if (ai.shouldDrag(duckStartX, optimalX, 30)) {
-          const dragPath = ai.calculateDragPath(duckStartX, optimalX, 15);
-
-          await page.mouse.move(duckStartX, box.y + box.height * 0.3);
-          await page.mouse.down();
-
-          // Follow calculated path
-          for (const x of dragPath) {
-            await page.mouse.move(x, box.y + box.height * 0.3);
-            await page.waitForTimeout(20);
-          }
-
-          await page.mouse.up();
-        }
-
-        // Wait for duck to land
-        await page.waitForTimeout(2000);
-
-        // Check if score increased
-        const scoreAfter = await page.locator("#scoreDisplay").textContent();
-        if (
-          scoreAfter &&
-          scoreBefore &&
-          Number.parseInt(scoreAfter, 10) > Number.parseInt(scoreBefore, 10)
-        ) {
+        // Perform AI drop attempt
+        const success = await performAIDuckDrop(page, ai, box);
+        if (success) {
           successfulDrops++;
         }
 
-        // Update AI time
+        // Update AI simulation
         ai.update(2.0);
 
         // Check if game is over

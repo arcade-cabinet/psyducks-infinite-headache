@@ -9,14 +9,11 @@ importers:
   .:
     dependencies:
       '@astrojs/sitemap':
-        specifier: ^3.2.1
+        specifier: ^3.7.0
         version: 3.7.0
       '@fontsource/fredoka-one':
         specifier: ^5.2.5
         version: 5.2.5
-      '@types/seedrandom':
-        specifier: ^3.0.8
-        version: 3.0.8
       '@vite-pwa/astro':
         specifier: ^0.4.3
         version: 0.4.3(astro@5.17.1(@types/node@22.19.7)(rollup@2.79.2)(terser@5.46.0)(typescript@5.9.3)(yaml@2.8.2))(vite-plugin-pwa@0.21.2(vite@6.4.1(@types/node@22.19.7)(terser@5.46.0)(yaml@2.8.2))(workbox-build@7.4.0)(workbox-window@7.4.0))
@@ -24,7 +21,7 @@ importers:
         specifier: ^4.3.5
         version: 4.3.5
       astro:
-        specifier: ^5.1.1
+        specifier: ^5.17.1
         version: 5.17.1(@types/node@22.19.7)(rollup@2.79.2)(terser@5.46.0)(typescript@5.9.3)(yaml@2.8.2)
       seedrandom:
         specifier: ^3.0.5
@@ -37,22 +34,25 @@ importers:
         specifier: ^0.9.6
         version: 0.9.6(prettier@3.8.1)(typescript@5.9.3)
       '@biomejs/biome':
-        specifier: ^2.3.0
+        specifier: ^2.3.13
         version: 2.3.13
       '@playwright/test':
-        specifier: ^1.49.1
+        specifier: ^1.58.1
         version: 1.58.1
       '@types/node':
-        specifier: ^22.10.5
+        specifier: ^22.19.7
         version: 22.19.7
+      '@types/seedrandom':
+        specifier: ^3.0.8
+        version: 3.0.8
       jsdom:
         specifier: ^27.4.0
         version: 27.4.0
       typescript:
-        specifier: ^5.7.3
+        specifier: ^5.9.3
         version: 5.9.3
       vitest:
-        specifier: ^2.1.8
+        specifier: ^2.1.9
         version: 2.1.9(@types/node@22.19.7)(jsdom@27.4.0)(terser@5.46.0)
       yuka:
         specifier: ^0.7.8

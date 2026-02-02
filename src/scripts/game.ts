@@ -321,7 +321,7 @@ export class Duck {
     this.stackCount = 1;
   }
 
-  update(_state: GameState) {
+  update() {
     // SQUISH recovery
     this.scaleX += (1 - this.scaleX) * 0.15;
     this.scaleY += (1 - this.scaleY) * 0.15;

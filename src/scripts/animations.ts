@@ -1,11 +1,12 @@
 /**
  * Enhanced Animation System using anime.js
  */
-import * as animeModule from "animejs";
+import type * as animeModule from "animejs";
 
 // anime.js v4 exports differently - access the default function
-// biome-ignore lint/suspicious/noExplicitAny: anime.js has complex type exports
-const anime = (animeModule as any).default || animeModule;
+const anime =
+  // biome-ignore lint/suspicious/noExplicitAny: anime.js complex module export requires type assertion
+  ((await import("animejs")) as typeof animeModule as any).default || (await import("animejs"));
 
 /**
  * Animate perfect landing text popup
@@ -182,9 +183,9 @@ export function createParticleBurst(container: HTMLElement, x: number, y: number
     duration: 1000,
     easing: "easeOutQuad",
     complete: () => {
-      for (const p of particles) {
+      particles.forEach((p) => {
         p.remove();
-      }
+      });
     },
   });
 }

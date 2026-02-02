@@ -139,6 +139,9 @@ export class SeededRandom {
    * Choose random element from array
    */
   choose<T>(array: T[]): T {
+    if (array.length === 0) {
+      throw new RangeError("choose() called with empty array");
+    }
     return array[this.nextInt(0, array.length)];
   }
 
@@ -273,12 +276,27 @@ export function parseShareableCode(code: string): {
 } | null {
   try {
     const decoded = atob(code);
-    const [seed, levelStr, scoreStr] = decoded.split(":");
-    return {
-      seed,
-      level: Number.parseInt(levelStr, 10),
-      score: Number.parseInt(scoreStr, 10),
-    };
+    const parts = decoded.split(":");
+
+    if (parts.length !== 3) {
+      return null;
+    }
+
+    const [seed, levelStr, scoreStr] = parts;
+    const level = Number.parseInt(levelStr, 10);
+    const score = Number.parseInt(scoreStr, 10);
+
+    // Validate parsed numbers
+    if (
+      Number.isNaN(level) ||
+      Number.isNaN(score) ||
+      !Number.isInteger(level) ||
+      !Number.isInteger(score)
+    ) {
+      return null;
+    }
+
+    return { seed, level, score };
   } catch {
     return null;
   }

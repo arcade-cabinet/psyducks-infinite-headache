@@ -547,9 +547,9 @@
   function loop() {
     // Update
     if (state.mode === "PLAYING") {
-      if (state.currentDuck) state.currentDuck.update(state);
+      if (state.currentDuck) state.currentDuck.update();
       for (const d of state.ducks) {
-        d.update(state);
+        d.update();
       }
       checkCollision();
 
@@ -723,20 +723,20 @@
 
   copySeedBtn?.addEventListener("click", (e) => {
     e.stopPropagation();
+    const originalText = copySeedBtn.textContent;
     navigator.clipboard.writeText(state.seed).then(() => {
-      const originalText = copySeedBtn.textContent;
       copySeedBtn.textContent = "✓";
       setTimeout(() => {
         copySeedBtn.textContent = originalText;
       }, 1000);
-    }).catch(() => {
+    }).catch((error) => {
       // Fallback: show error state briefly
+      console.error("Failed to copy seed:", error);
       copySeedBtn.textContent = "✗";
       setTimeout(() => {
-        copySeedBtn.textContent = "📋";
+        copySeedBtn.textContent = originalText;
       }, 1000);
     });
-  });
   });
 
   // Initialize view
