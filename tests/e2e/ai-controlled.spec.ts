@@ -125,7 +125,7 @@ test.describe("AI-Controlled Gameplay Tests", () => {
     const ai = new AIPlayer();
 
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Use deterministic seed for AI testing
     await page.fill("#seedInput", "ai-test-seed-001");

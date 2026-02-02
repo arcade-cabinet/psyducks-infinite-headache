@@ -15,6 +15,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
+  timeout: 30000,
+  globalTimeout: process.env.CI ? 300000 : undefined,
   reporter: [
     ["html", { open: "never" }],
     ["list"],
@@ -60,7 +62,7 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: "pnpm build && pnpm preview -- --port 4321 --host",
+    command: "pnpm build && pnpm exec astro preview --port 4321 --host",
     url: "http://localhost:4321/psyducks-infinite-headache/",
     reuseExistingServer: !process.env.CI,
     timeout: 120000,

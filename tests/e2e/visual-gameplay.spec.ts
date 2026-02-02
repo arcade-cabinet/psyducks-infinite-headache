@@ -7,7 +7,7 @@ test.describe("Psyduck's Infinite Headache - Visual & Gameplay Tests", () => {
 
   test("should capture main menu screenshot", async ({ page }) => {
     // Wait for page to be fully loaded
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     await page.waitForSelector(".title", { state: "visible" });
     await page.waitForSelector("#startBtn", { state: "visible" });
 
