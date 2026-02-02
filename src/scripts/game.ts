@@ -76,6 +76,8 @@ export interface Config {
   squishFactor: number;
   mergeThreshold: number;
   spawnInterval: number;
+  mergeGrowthRate: number;
+  levelUpWidthRatio: number;
 }
 
 // Configuration
@@ -90,6 +92,8 @@ export const CONFIG: Config = {
   squishFactor: 0.2,
   mergeThreshold: 5, // Merge after 5 stacks
   spawnInterval: 2000, // Spawn new duck every 2 seconds
+  mergeGrowthRate: 0.5, // Base duck grows by 50% per merge
+  levelUpWidthRatio: 0.85, // Level up when base duck fills 85% of screen width
 };
 
 // --- VISUALS ---
@@ -310,7 +314,7 @@ export class Duck {
     this.primaryColor = primaryColor;
     this.secondaryColor = secondaryColor;
     // Size scales with merge level
-    const sizeMultiplier = 1 + mergeLevel * 0.3;
+    const sizeMultiplier = 1 + mergeLevel * CONFIG.mergeGrowthRate;
     this.w = CONFIG.duckBaseWidth * sizeMultiplier;
     this.h = CONFIG.duckBaseHeight * sizeMultiplier;
     this.isStatic = isStatic;

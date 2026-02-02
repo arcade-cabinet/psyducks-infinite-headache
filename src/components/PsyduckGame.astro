@@ -18,6 +18,7 @@
   </div>
 
   <div id="start-screen">
+    <button class="btn-help" id="helpBtn" title="How to play">?</button>
     <h1 class="title">PSYDUCK'S<br />INFINITE HEADACHE</h1>
     <p style="color: #E1BEE7; font-size: 1.2rem; margin-bottom: 25px; line-height: 1.5;">
       Drag the Psyducks left and right!<br />
@@ -25,7 +26,7 @@
       Keep the tower balanced!<br />
       Fill the screen to level up!
     </p>
-    
+
     <div class="seed-container">
       <label for="seedInput" class="seed-label">Game Seed (optional):</label>
       <div class="seed-input-group">
@@ -44,8 +45,39 @@
         Leave empty for random, or enter seed for deterministic gameplay
       </p>
     </div>
-    
+
     <button class="btn" id="startBtn">PLAY</button>
+  </div>
+
+  <div id="help-screen" class="hidden">
+    <h1 class="title" style="font-size: 2.5rem;">HOW TO PLAY</h1>
+    <div class="help-items">
+      <div class="help-item">
+        <span class="help-icon">🎯</span>
+        <div><strong>GOAL</strong><br />Stack ducks to grow your Psyduck</div>
+      </div>
+      <div class="help-item">
+        <span class="help-icon">👆</span>
+        <div><strong>CONTROLS</strong><br />Drag to position, tap/click to drop</div>
+      </div>
+      <div class="help-item">
+        <span class="help-icon">🔀</span>
+        <div><strong>MERGE</strong><br />Stack 5 ducks to merge and grow your base Psyduck</div>
+      </div>
+      <div class="help-item">
+        <span class="help-icon">⬆️</span>
+        <div><strong>LEVEL UP</strong><br />Grow your Psyduck big enough to fill the screen</div>
+      </div>
+      <div class="help-item">
+        <span class="help-icon">⚠️</span>
+        <div><strong>WARNING</strong><br />Keep the tower balanced and don't miss</div>
+      </div>
+      <div class="help-item">
+        <span class="help-icon">🔥</span>
+        <div><strong>DIFFICULTY</strong><br />Each level gets harder - ducks spawn faster</div>
+      </div>
+    </div>
+    <button class="btn" id="helpCloseBtn">GOT IT!</button>
   </div>
 
   <div id="level-up-screen" class="hidden">
@@ -281,14 +313,13 @@
     const spawnX = state.rng.nextFloat(CONFIG.duckBaseWidth, state.width - CONFIG.duckBaseWidth);
     const spawnY = -CONFIG.duckBaseHeight;
 
-    const mergeLevel = Math.floor(state.mergeCount / CONFIG.mergeThreshold);
     const levelConfig = getCurrentLevelConfig();
 
     state.currentDuck = new Duck(
       spawnX,
       spawnY,
       false,
-      mergeLevel,
+      0, // Always spawn base-size ducks
       levelConfig.color,
       levelConfig.secondaryColor
     );
@@ -316,56 +347,41 @@
   }
 
   function checkMerge() {
-    // Check if last 5 ducks have same merge level (base duck is excluded from merging)
-    if (state.ducks.length < CONFIG.mergeThreshold + 1) return; // +1 for base duck
-    
-    const lastFive = state.ducks.slice(-CONFIG.mergeThreshold);
-    const mergeLevel = lastFive[0].mergeLevel;
-    
-    // All 5 must have same merge level
-    if (!lastFive.every(d => d.mergeLevel === mergeLevel)) return;
-    
+    // Every 5 successful lands = merge. Grow the base duck.
+    if (state.mergeCount < CONFIG.mergeThreshold) return;
+
+    // Need at least 5 stacked ducks + base duck
+    if (state.ducks.length < CONFIG.mergeThreshold + 1) return;
+
     // MERGE!
     playMerge();
-    
-    // Remove last 5 ducks
+
+    // Remove the last 5 stacked ducks
     state.ducks.splice(-CONFIG.mergeThreshold, CONFIG.mergeThreshold);
-    
-    // Create merged duck at position of topmost removed duck
-    const topDuck = state.ducks[state.ducks.length - 1];
-    const targetY = topDuck.y - topDuck.h * 0.85;
-    const levelConfig = getCurrentLevelConfig();
-    
-    const mergedDuck = new Duck(
-      lastFive[CONFIG.mergeThreshold - 1].x,
-      targetY,
-      true,
-      mergeLevel + 1,
-      levelConfig.color,
-      levelConfig.secondaryColor
-    );
-    
-    state.ducks.push(mergedDuck);
-    
-    // Particles burst
+
+    // Grow the base duck (index 0)
+    const baseDuck = state.ducks[0];
+    baseDuck.mergeLevel++;
+    const sizeMultiplier = 1 + baseDuck.mergeLevel * CONFIG.mergeGrowthRate;
+    baseDuck.w = CONFIG.duckBaseWidth * sizeMultiplier;
+    baseDuck.h = CONFIG.duckBaseHeight * sizeMultiplier;
+
+    // Particles burst from base duck
     for (let i = 0; i < 40; i++) {
-      state.particles.push(new Particle(mergedDuck.x, mergedDuck.y, state.rng));
+      state.particles.push(new Particle(baseDuck.x, baseDuck.y, state.rng));
     }
-    
+
     // Reset merge count
     state.mergeCount = 0;
-    
+
     // Check if level complete
-    checkLevelComplete(mergedDuck);
+    checkLevelComplete();
   }
 
-  function checkLevelComplete(mergedDuck: Duck) {
-    // Check if duck fills screen (>15% area or merge level >= 3)
-    const duckArea = mergedDuck.w * mergedDuck.h;
-    const screenArea = state.width * state.height;
-    const areaPercent = duckArea / screenArea;
-    
-    if (areaPercent > 0.15 || mergedDuck.mergeLevel >= 3) {
+  function checkLevelComplete() {
+    // Level up when the base duck fills enough of the screen width
+    const baseDuck = state.ducks[0];
+    if (baseDuck.w >= DESIGN_WIDTH * CONFIG.levelUpWidthRatio) {
       // Level up!
       state.mode = "LEVELUP";
       state.level++;
@@ -761,6 +777,20 @@
     e.stopPropagation();
     const newSeed = new SeededRandom().seed;
     seedInput.value = newSeed;
+  });
+
+  document.getElementById("helpBtn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    startScreen.classList.add("hidden");
+    const helpScreen = document.getElementById("help-screen") as HTMLElement;
+    helpScreen.classList.remove("hidden");
+  });
+
+  document.getElementById("helpCloseBtn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const helpScreen = document.getElementById("help-screen") as HTMLElement;
+    helpScreen.classList.add("hidden");
+    startScreen.classList.remove("hidden");
   });
 
   copySeedBtn?.addEventListener("click", (e) => {
