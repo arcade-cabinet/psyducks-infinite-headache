@@ -55,9 +55,8 @@ class AIPlayer {
    */
   calculateDragPath(fromX: number, toX: number, steps = 10): number[] {
     const path: number[] = [];
-    const _seekBehavior = new YUKA.SeekBehavior(new YUKA.Vector3(toX, 0, 0));
 
-    // Simulate smooth path
+    // Simulate smooth path with ease-out curve
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
       // Ease-out curve for natural movement
