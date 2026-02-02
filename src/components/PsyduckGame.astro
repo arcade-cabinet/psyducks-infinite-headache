@@ -140,8 +140,10 @@
   import { SeededRandom, sanitizeSeed } from "@/scripts/seededRandom";
   import { detectInputMethod, getControlHint, getGyroState, initGyroscope, triggerHaptic } from "@/scripts/device";
 
-  // Responsive scaling constants
-  const DESIGN_WIDTH = 412;
+  // Responsive scaling: design width grows with viewport so wider screens
+  // show more game area instead of a zoomed-in view.
+  const MIN_DESIGN_WIDTH = 412; // mobile baseline
+  const MAX_DESIGN_WIDTH = 800; // cap for large monitors
 
   const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
   const ctx = canvas.getContext("2d", { alpha: false }) as CanvasRenderingContext2D;
@@ -220,9 +222,9 @@
     canvas.width = vw * dpr;
     canvas.height = vh * dpr;
 
-    // Full viewport width — no max cap
-    const effectiveWidth = vw;
-    const scale = effectiveWidth / DESIGN_WIDTH;
+    // Responsive design width: wider screens get more game area, not more zoom
+    const designWidth = Math.max(MIN_DESIGN_WIDTH, Math.min(vw, MAX_DESIGN_WIDTH));
+    const scale = vw / designWidth;
 
     state.viewportWidth = vw;
     state.viewportHeight = vh;
@@ -230,8 +232,8 @@
     state.dpr = dpr;
     state.gameOffsetX = 0;
 
-    // Game logic uses fixed design-space coordinates
-    state.width = DESIGN_WIDTH;
+    // Game logic uses responsive design-space coordinates
+    state.width = designWidth;
     state.height = vh / scale;
     state.baseY = state.height - 100;
   }
@@ -400,7 +402,7 @@
   function checkLevelComplete() {
     // Level up when the base duck fills enough of the screen width
     const baseDuck = state.ducks[0];
-    if (baseDuck.w >= DESIGN_WIDTH * CONFIG.levelUpWidthRatio) {
+    if (baseDuck.w >= state.width * CONFIG.levelUpWidthRatio) {
       // Level up!
       state.mode = "LEVELUP";
       state.level++;
