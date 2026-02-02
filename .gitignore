@@ -145,3 +145,14 @@ vite.config.ts.timestamp-*
 playwright-report/
 test-results/
 playwright/.cache/
+
+# Test artifacts
+screenshots/
+videos/
+*.mp4
+*.webm
+
+# Backup files
+*.backup
+*.bak
+*.tmp
