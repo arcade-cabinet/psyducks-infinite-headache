@@ -120,13 +120,14 @@ test.describe("Psyduck's Infinite Headache - Visual & Gameplay Tests", () => {
       // Click far from center to miss
       await page.mouse.click(box.x + 50, box.y + box.height * 0.5);
       await page.waitForTimeout(2000);
-
+      
       // Check if game over screen appeared
       const gameOverVisible = await page.locator("#game-over-screen").isVisible();
       if (gameOverVisible) break;
     }
 
-    await page.waitForTimeout(1000);
+    // Ensure game over was triggered
+    await expect(page.locator("#game-over-screen")).toBeVisible({ timeout: 5000 });
 
     await page.screenshot({
       path: "test-results/screenshots/game-over-screen.png",
