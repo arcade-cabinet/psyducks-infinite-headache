@@ -5,7 +5,7 @@ import { defineConfig } from "astro/config";
 // https://astro.build/config
 export default defineConfig({
   site: "https://arcade-cabinet.github.io",
-  base: "/psyducks-infinite-headache",
+  base: "/psyducks-infinite-headache/",
   integrations: [
     sitemap(),
     AstroPWA({

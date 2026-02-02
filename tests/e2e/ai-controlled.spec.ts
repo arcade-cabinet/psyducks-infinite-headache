@@ -124,7 +124,7 @@ test.describe("AI-Controlled Gameplay Tests", () => {
   test("AI should successfully play several rounds", async ({ page }) => {
     const ai = new AIPlayer();
 
-    await page.goto("/psyducks-infinite-headache/");
+    await page.goto("/");
     await page.waitForLoadState("networkidle");
 
     // Use deterministic seed for AI testing
@@ -177,7 +177,7 @@ test.describe("AI-Controlled Gameplay Tests", () => {
   test("AI should navigate through menu and start game", async ({ page }) => {
     const ai = new AIPlayer();
 
-    await page.goto("/psyducks-infinite-headache/");
+    await page.goto("/");
 
     // AI observes menu
     await expect(page.locator("#startBtn")).toBeVisible();
@@ -204,7 +204,7 @@ test.describe("AI-Controlled Gameplay Tests", () => {
   });
 
   test("AI should detect and respond to stability warnings", async ({ page }) => {
-    await page.goto("/psyducks-infinite-headache/");
+    await page.goto("/");
     await page.fill("#seedInput", "stability-test");
     await page.click("#startBtn");
     await page.waitForTimeout(1500);

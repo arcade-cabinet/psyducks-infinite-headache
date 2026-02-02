@@ -21,7 +21,7 @@ export default defineConfig({
     ["json", { outputFile: "test-results/results.json" }],
   ],
   use: {
-    baseURL: "http://localhost:4321",
+    baseURL: "http://localhost:4321/psyducks-infinite-headache",
     trace: "on-first-retry",
     screenshot: "on",
     video: "retain-on-failure",
@@ -60,8 +60,8 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: "pnpm build && pnpm preview -- --port 4321 --strictPort",
-    url: "http://localhost:4321",
+    command: "pnpm preview -- --port 4321",
+    url: "http://localhost:4321/psyducks-infinite-headache",
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },

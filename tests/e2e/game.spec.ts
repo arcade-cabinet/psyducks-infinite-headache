@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test.describe("Psyduck's Infinite Headache Game", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/psyducks-infinite-headache/");
+    await page.goto("/");
   });
 
   test("should load the game page correctly", async ({ page }) => {
