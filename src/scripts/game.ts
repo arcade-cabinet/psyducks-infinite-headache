@@ -285,6 +285,7 @@ export class Particle {
 export class Duck {
   x: number;
   y: number;
+  prevY: number; // Previous frame Y for swept collision
   w: number;
   h: number;
   isStatic: boolean;
@@ -310,6 +311,7 @@ export class Duck {
     this.spawnX = x;
     this.x = x;
     this.y = y;
+    this.prevY = y;
     this.mergeLevel = mergeLevel;
     this.primaryColor = primaryColor;
     this.secondaryColor = secondaryColor;
@@ -345,6 +347,7 @@ export class Duck {
 
     // Start or continue falling
     this.isFalling = true;
+    this.prevY = this.y;
     this.y += this.velocity;
   }
 

@@ -6,6 +6,13 @@
 const anime = ((await import("animejs")) as any).default || (await import("animejs"));
 
 /**
+ * Cancel all active anime.js animations on a target element
+ */
+export function cancelAnimations(element: HTMLElement) {
+  anime.remove(element);
+}
+
+/**
  * Animate perfect landing text popup
  */
 export function animatePerfectText(element: HTMLElement) {

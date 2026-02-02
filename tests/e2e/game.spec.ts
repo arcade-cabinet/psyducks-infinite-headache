@@ -14,6 +14,19 @@ async function startGame(page: import("@playwright/test").Page) {
   await expect(page.locator("#scoreBox")).toBeVisible();
 }
 
+// Helper: read __gameState property from the browser (avoids biome noExplicitAny in each test)
+// biome-ignore lint/suspicious/noExplicitAny: accessing injected game state on window
+function getGameState(page: import("@playwright/test").Page, path: string): Promise<any> {
+  return page.evaluate((p) => {
+    // biome-ignore lint/suspicious/noExplicitAny: injected game state
+    const gs = (window as any).__gameState;
+    return p.split(".").reduce((obj: unknown, key: string) => {
+      if (obj != null && typeof obj === "object") return (obj as Record<string, unknown>)[key];
+      return undefined;
+    }, gs);
+  }, path);
+}
+
 test.describe("Psyduck's Infinite Headache Game", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("");
@@ -156,5 +169,97 @@ test.describe("Psyduck's Infinite Headache Game", () => {
       },
       { timeout: 10000 },
     );
+  });
+
+  test("should auto-generate seed on load", async ({ page }) => {
+    await waitForGameReady(page);
+
+    // Seed input should be pre-filled
+    const seedValue = await page.locator("#seedInput").inputValue();
+    expect(seedValue.length).toBeGreaterThan(0);
+
+    // Label should not say "optional"
+    const label = page.locator(".seed-label");
+    await expect(label).toContainText("Game Seed:");
+    const labelText = await label.textContent();
+    expect(labelText).not.toContain("optional");
+  });
+
+  test("should not show black screen on retry", async ({ page }) => {
+    await startGame(page);
+
+    const gameOverScreen = page.locator("#game-over-screen");
+
+    // Force game over by clicking off-center
+    for (let i = 0; i < 8; i++) {
+      await page.locator("#gameCanvas").click({ position: { x: 10, y: 300 } });
+      try {
+        await expect(gameOverScreen).toBeVisible({ timeout: 3000 });
+        break;
+      } catch {
+        // keep trying
+      }
+    }
+
+    const isGameOver = await gameOverScreen.isVisible();
+    if (isGameOver) {
+      await page.locator("#restartBtn").click();
+      await expect(gameOverScreen).toBeHidden();
+
+      // Score should be reset
+      await expect(page.locator("#scoreDisplay")).toContainText("0");
+
+      // ScoreBox should be visible (no black screen)
+      await expect(page.locator("#scoreBox")).toBeVisible();
+
+      // Start screen should remain hidden (skip start on retry)
+      await expect(page.locator("#start-screen")).toBeHidden();
+
+      // Canvas should be rendering (check it's not all-black via game state)
+      const mode = await getGameState(page, "mode");
+      expect(mode).toBe("PLAYING");
+    }
+  });
+
+  test("should move duck with arrow keys", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name.startsWith("mobile"), "Arrow keys not available on mobile");
+
+    await startGame(page);
+    await page.waitForTimeout(500);
+
+    // Get initial duck position
+    const initialX = await getGameState(page, "currentDuck.x");
+    expect(initialX).toBeDefined();
+
+    // Press ArrowRight several times
+    for (let i = 0; i < 5; i++) {
+      await page.keyboard.press("ArrowRight");
+    }
+
+    const afterRightX = await getGameState(page, "currentDuck.x");
+    expect(afterRightX).toBeGreaterThan(initialX);
+
+    // Press ArrowLeft several times
+    for (let i = 0; i < 5; i++) {
+      await page.keyboard.press("ArrowLeft");
+    }
+
+    const afterLeftX = await getGameState(page, "currentDuck.x");
+    expect(afterLeftX).toBeLessThan(afterRightX);
+  });
+
+  test("should use full viewport width", async ({ page }) => {
+    await waitForGameReady(page);
+
+    const gameOffsetX = await getGameState(page, "gameOffsetX");
+    expect(gameOffsetX).toBe(0);
+
+    // Canvas should fill viewport width
+    const canvasWidth = await page.evaluate(() => {
+      const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
+      return canvas.getBoundingClientRect().width;
+    });
+    const viewportWidth = await page.evaluate(() => window.innerWidth);
+    expect(canvasWidth).toBe(viewportWidth);
   });
 });

@@ -104,6 +104,51 @@ describe("Particle Class", () => {
   });
 });
 
+describe("Duck prevY tracking", () => {
+  it("should set prevY before applying velocity in update()", () => {
+    const duck = new Duck(100, 200, false, 0);
+    expect(duck.prevY).toBe(200);
+
+    duck.update();
+
+    // prevY should be the old y (200), y should have moved by velocity
+    expect(duck.prevY).toBe(200);
+    expect(duck.y).toBe(200 + CONFIG.gravity);
+  });
+
+  it("should track prevY across multiple updates", () => {
+    const duck = new Duck(100, 0, false, 0);
+
+    for (let i = 0; i < 5; i++) {
+      const yBefore = duck.y;
+      duck.update();
+      expect(duck.prevY).toBe(yBefore);
+      expect(duck.y).toBe(yBefore + CONFIG.gravity);
+    }
+  });
+
+  it("should not update prevY when static", () => {
+    const duck = new Duck(100, 200, true, 0);
+    duck.update();
+    // Static ducks don't fall, prevY stays at initial
+    expect(duck.prevY).toBe(200);
+    expect(duck.y).toBe(200);
+  });
+});
+
+describe("CONFIG properties", () => {
+  it("should have mergeGrowthRate defined and positive", () => {
+    expect(CONFIG.mergeGrowthRate).toBeDefined();
+    expect(CONFIG.mergeGrowthRate).toBeGreaterThan(0);
+  });
+
+  it("should have levelUpWidthRatio defined between 0 and 1", () => {
+    expect(CONFIG.levelUpWidthRatio).toBeDefined();
+    expect(CONFIG.levelUpWidthRatio).toBeGreaterThan(0);
+    expect(CONFIG.levelUpWidthRatio).toBeLessThanOrEqual(1);
+  });
+});
+
 describe("Game Logic", () => {
   it("should detect perfect landing tolerance", () => {
     const tolerance = CONFIG.perfectTolerance;
