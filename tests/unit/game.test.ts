@@ -161,8 +161,8 @@ describe("Game Logic", () => {
   });
 
   it("should calculate hit tolerance correctly", () => {
-    const maxDiff = CONFIG.duckWidth * CONFIG.hitTolerance;
+    const maxDiff = CONFIG.duckBaseWidth * CONFIG.hitTolerance;
     expect(maxDiff).toBeGreaterThan(0);
-    expect(maxDiff).toBeLessThan(CONFIG.duckWidth);
+    expect(maxDiff).toBeLessThan(CONFIG.duckBaseWidth);
   });
 });
