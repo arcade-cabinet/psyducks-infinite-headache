@@ -1,4 +1,5 @@
 ---
+import "@fontsource/fredoka-one";
 import "@/styles/global.css";
 
 export interface Props {
@@ -6,7 +7,12 @@ export interface Props {
   description?: string;
 }
 
-const { title = "Psyduck Stack", description = "Psyduck's Infinite Headache Tower - A stacking game" } = Astro.props;
+const {
+  // biome-ignore lint/correctness/noUnusedVariables: Used in HTML template
+  title = "Psyduck Stack",
+  // biome-ignore lint/correctness/noUnusedVariables: Used in HTML template
+  description = "Psyduck's Infinite Headache Tower - A stacking game",
+} = Astro.props;
 ---
 
 <!doctype html>
@@ -19,20 +25,16 @@ const { title = "Psyduck Stack", description = "Psyduck's Infinite Headache Towe
     />
     <meta name="description" content={description} />
     <meta name="generator" content={Astro.generator} />
-    
+
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#4A148C" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Psyduck Stack" />
-    
+
     <link rel="icon" type="image/svg+xml" href="/psyduck-stsck/favicon.svg" />
     <link rel="manifest" href="/psyduck-stsck/manifest.json" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap"
-      rel="stylesheet"
-    />
-    
+
     <title>{title}</title>
   </head>
   <body>

@@ -10,11 +10,12 @@ Stack Psyducks as high as you can! Land perfectly for bonus stability. The heada
 
 - 🎮 **Addictive Gameplay**: Simple tap/click controls with increasing difficulty
 - 📱 **PWA Support**: Install on your device and play offline
-- 🎨 **Animated Graphics**: Canvas-based rendering with smooth animations
-- 🔊 **Procedural Audio**: Dynamic sound effects using Web Audio API
+- 🎨 **Animated Graphics**: Canvas-based rendering with anime.js-powered smooth animations
+- 🔊 **Enhanced Audio**: Rich sound effects using Tone.js Web Audio framework
 - 💾 **High Score Tracking**: Local storage persistence
 - 🌈 **Responsive Design**: Works on desktop and mobile devices
 - ⚡ **Fast Performance**: Built with Astro for optimal loading
+- 📦 **No CDN Dependencies**: All assets bundled locally
 
 ## Development
 
@@ -146,6 +147,9 @@ The project automatically deploys to GitHub Pages via GitHub Actions when change
 - **Framework**: Astro 5
 - **Language**: TypeScript
 - **Styling**: CSS with custom properties
+- **Animation**: anime.js 4.x for UI animations
+- **Audio**: Tone.js 15.x for enhanced sound system
+- **Fonts**: @fontsource (local, no CDN)
 - **Testing**: Vitest (unit) + Playwright (E2E)
 - **Code Quality**: Biome 2.3
 - **PWA**: @vite-pwa/astro

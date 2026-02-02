@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, expect, it } from "vitest";
 import { CONFIG, Duck, Particle } from "@/scripts/game";
 
 describe("Game Configuration", () => {
@@ -56,12 +56,12 @@ describe("Duck Class", () => {
 
     duck.squish();
     const initialScaleY = duck.scaleY;
-    
+
     // Update multiple times
     for (let i = 0; i < 10; i++) {
       duck.update(mockState);
     }
-    
+
     // Should be closer to 1 after updates
     expect(duck.scaleY).toBeGreaterThan(initialScaleY);
     expect(duck.scaleX).toBeLessThan(1 + CONFIG.squishFactor);
@@ -70,7 +70,7 @@ describe("Duck Class", () => {
   it("should increase speed with score", () => {
     const duckScore0 = new Duck(100, 200, false, 0);
     const duckScore10 = new Duck(100, 200, false, 10);
-    
+
     expect(duckScore10.speedBase).toBeGreaterThan(duckScore0.speedBase);
   });
 
@@ -96,7 +96,7 @@ describe("Duck Class", () => {
     const initialY = duck.y;
     duck.isFalling = true;
     duck.update(mockState);
-    
+
     // Y should increase due to gravity
     expect(duck.y).toBeGreaterThan(initialY);
   });
@@ -118,9 +118,9 @@ describe("Particle Class", () => {
     const initialLife = particle.life;
     const initialX = particle.x;
     const initialY = particle.y;
-    
+
     particle.update();
-    
+
     expect(particle.life).toBeLessThan(initialLife);
     // Position should change based on velocity
     expect(particle.x).not.toBe(initialX);
@@ -129,12 +129,12 @@ describe("Particle Class", () => {
 
   it("should decay life over time", () => {
     const particle = new Particle(100, 200);
-    
+
     // Update many times
     for (let i = 0; i < 40; i++) {
       particle.update();
     }
-    
+
     // Life should be significantly decayed or zero
     expect(particle.life).toBeLessThanOrEqual(0);
   });
@@ -145,7 +145,7 @@ describe("Game Logic", () => {
     const tolerance = CONFIG.perfectTolerance;
     const withinTolerance = 5;
     const outsideTolerance = 10;
-    
+
     expect(Math.abs(withinTolerance)).toBeLessThan(tolerance);
     expect(Math.abs(outsideTolerance)).toBeGreaterThan(tolerance);
   });

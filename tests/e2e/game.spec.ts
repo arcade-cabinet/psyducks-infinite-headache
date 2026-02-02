@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 test.describe("Psyduck Stack Game", () => {
   test.beforeEach(async ({ page }) => {
@@ -75,9 +75,7 @@ test.describe("Psyduck Stack Game", () => {
     const gameOverVisible = await page.locator("#game-over-screen").isVisible();
 
     // Either score increased or game is over
-    expect(
-      finalScore !== initialScore || gameOverVisible
-    ).toBeTruthy();
+    expect(finalScore !== initialScore || gameOverVisible).toBeTruthy();
   });
 
   test("should show game over screen on miss", async ({ page }) => {
@@ -89,7 +87,7 @@ test.describe("Psyduck Stack Game", () => {
     for (let i = 0; i < 5; i++) {
       await page.locator("#gameCanvas").click({ position: { x: 50, y: 300 } });
       await page.waitForTimeout(2000);
-      
+
       // Check if game over screen appeared
       const isGameOver = await page.locator("#game-over-screen").isVisible();
       if (isGameOver) {
@@ -172,8 +170,6 @@ test.describe("Psyduck Stack Game", () => {
     const gameOverVisible = await page.locator("#game-over-screen").isVisible();
 
     // Either score increased or game is over
-    expect(
-      finalScore !== initialScore || gameOverVisible
-    ).toBeTruthy();
+    expect(finalScore !== initialScore || gameOverVisible).toBeTruthy();
   });
 });

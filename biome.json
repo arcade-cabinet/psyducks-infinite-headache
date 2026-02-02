@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.3.13/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -7,7 +7,7 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "ignore": ["node_modules", "dist", ".astro", "pnpm-lock.yaml", "public/sw.js"]
+    "includes": ["src/**/*", "tests/**/*", "astro.config.mjs", "*.config.ts"]
   },
   "formatter": {
     "enabled": true,
@@ -15,9 +15,6 @@
     "indentWidth": 2,
     "lineEnding": "lf",
     "lineWidth": 100
-  },
-  "organizeImports": {
-    "enabled": true
   },
   "linter": {
     "enabled": true,
