@@ -156,7 +156,6 @@
     targetCameraY: 0,
   };
 
-  let lastSpawnTime = 0;
   let touchIdentifier: number | null = null;
   const wobblePhysics = new WobblePhysics();
 
@@ -205,7 +204,6 @@
     state.stressLevel = 0;
     state.mergeCount = 0;
     state.isDragging = false;
-    lastSpawnTime = Date.now();
     wobblePhysics.reset();
 
     highScoreDisplay.textContent = state.highScore.toString();
@@ -280,7 +278,7 @@
   }
 
   function checkMerge() {
-    // Check if last 5 ducks (excluding base) have same merge level
+    // Check if last 5 ducks have same merge level (base duck has different logic)
     if (state.ducks.length < CONFIG.mergeThreshold + 1) return; // +1 for base duck
     
     const lastFive = state.ducks.slice(-CONFIG.mergeThreshold);
@@ -404,7 +402,6 @@
         // Use seeded spawn timing
         const levelConfig = getCurrentLevelConfig();
         const spawnDelay = levelConfig.spawnInterval;
-        lastSpawnTime = Date.now() + spawnDelay;
         
         setTimeout(() => {
           if (state.mode === "PLAYING") {

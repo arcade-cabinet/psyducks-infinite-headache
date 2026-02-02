@@ -1,6 +1,7 @@
 /**
  * PSYDUCK INFINITE TOWER V3 - Drag & Merge Edition
  */
+import type { SeededRandom } from "./seededRandom";
 
 // Types
 export interface GameState {
@@ -21,7 +22,7 @@ export interface GameState {
   isDragging: boolean;
   dragStartX: number;
   mergeCount: number;
-  rng: any; // SeededRandom instance
+  rng: SeededRandom;
   levelConfigs: LevelConfig[];
   cameraY: number;
   targetCameraY: number;
