@@ -1,0 +1,792 @@
+---
+// This component contains the game UI structure
+---
+
+<canvas id="gameCanvas"></canvas>
+
+<div id="ui-layer">
+  <div class="score-container hidden" id="scoreBox">
+    <div class="level-display">LEVEL <span id="levelDisplay">1</span></div>
+    <div class="score" id="scoreDisplay">0</div>
+    <div class="highscore">BEST: <span id="highScoreDisplay">0</span></div>
+    <div class="stability-container">
+      <div class="stability-label">STABILITY</div>
+      <div class="stability-bar-bg">
+        <div class="stability-bar" id="stabilityBar"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="start-screen">
+    <h1 class="title">PSYDUCK'S<br />INFINITE HEADACHE</h1>
+    <p style="color: #E1BEE7; font-size: 1.2rem; margin-bottom: 25px; line-height: 1.5;">
+      Drag the Psyducks left and right!<br />
+      Stack 5 to merge into a bigger duck.<br />
+      Keep the tower balanced!<br />
+      Fill the screen to level up!
+    </p>
+    
+    <div class="seed-container">
+      <label for="seedInput" class="seed-label">Game Seed (optional):</label>
+      <div class="seed-input-group">
+        <input
+          type="text"
+          id="seedInput"
+          class="seed-input"
+          placeholder="cosmic-electric-tower"
+          maxlength="100"
+        />
+        <button class="btn-small" id="shuffleSeedBtn" title="Generate random seed">
+          🎲
+        </button>
+      </div>
+      <p class="seed-hint">
+        Leave empty for random, or enter seed for deterministic gameplay
+      </p>
+    </div>
+    
+    <button class="btn" id="startBtn">PLAY</button>
+  </div>
+
+  <div id="level-up-screen" class="hidden">
+    <h1 class="title">LEVEL UP!</h1>
+    <p style="color: #FDD835; font-size: 2rem; margin-bottom: 10px;">
+      Level <span id="newLevelDisplay">2</span>
+    </p>
+    <p style="color: #E1BEE7; font-size: 1.3rem; margin-bottom: 25px;" id="levelName">
+      Pink Paradise
+    </p>
+    <button class="btn" id="continueLevelBtn">CONTINUE</button>
+  </div>
+
+  <div id="game-over-screen" class="hidden">
+    <h1 class="title">OH NO!</h1>
+    <p style="color: white; font-size: 1.5rem; margin-bottom: 10px;">
+      Level: <span id="finalLevel">1</span> | Height: <span id="finalScore">0</span> Ducks
+    </p>
+    <p style="color: #EF5350; font-size: 1.1rem; margin-bottom: 15px;" id="failMessage">
+      The headache won.
+    </p>
+    <div class="seed-display">
+      <p style="color: #FDD835; font-size: 0.9rem; margin-bottom: 10px;">
+        Seed: <span id="gameOverSeed" class="seed-code">cosmic-tower</span>
+        <button class="btn-copy" id="copySeedBtn" title="Copy seed">📋</button>
+      </p>
+    </div>
+    <button class="btn" id="restartBtn">RETRY</button>
+  </div>
+</div>
+
+<script>
+  import type { GameState } from "@/scripts/game";
+  import { CONFIG, Duck, Particle, generateLevelConfigs } from "@/scripts/game";
+  import {
+    animateGameOver,
+    animateLevelUp,
+    animatePerfectText,
+    animateScoreUpdate,
+    criticalShake,
+    fadeIn,
+    fadeOut,
+  } from "@/scripts/animations";
+  import {
+    initAudio,
+    playDrop,
+    playFail,
+    playLand,
+    playLevelUp,
+    playMerge,
+    playPerfect,
+  } from "@/scripts/audio";
+  import {
+    WobblePhysics,
+    applyWobbleTransform,
+    calculateImbalance,
+    restoreWobbleTransform,
+  } from "@/scripts/wobble";
+  import { SeededRandom, sanitizeSeed } from "@/scripts/seededRandom";
+
+  // Responsive scaling constants
+  const DESIGN_WIDTH = 412;
+  const MAX_GAME_WIDTH = 600;
+
+  const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
+  const ctx = canvas.getContext("2d", { alpha: false }) as CanvasRenderingContext2D;
+  const scoreDisplay = document.getElementById("scoreDisplay") as HTMLElement;
+  const levelDisplay = document.getElementById("levelDisplay") as HTMLElement;
+  const highScoreDisplay = document.getElementById("highScoreDisplay") as HTMLElement;
+  const scoreBox = document.getElementById("scoreBox") as HTMLElement;
+  const startScreen = document.getElementById("start-screen") as HTMLElement;
+  const levelUpScreen = document.getElementById("level-up-screen") as HTMLElement;
+  const newLevelDisplay = document.getElementById("newLevelDisplay") as HTMLElement;
+  const levelNameDisplay = document.getElementById("levelName") as HTMLElement;
+  const gameOverScreen = document.getElementById("game-over-screen") as HTMLElement;
+  const finalScoreEl = document.getElementById("finalScore") as HTMLElement;
+  const finalLevelEl = document.getElementById("finalLevel") as HTMLElement;
+  const failMessageEl = document.getElementById("failMessage") as HTMLElement;
+  const gameOverSeedEl = document.getElementById("gameOverSeed") as HTMLElement;
+  const uiLayer = document.getElementById("ui-layer") as HTMLElement;
+  const stabilityBar = document.getElementById("stabilityBar") as HTMLElement;
+  const seedInput = document.getElementById("seedInput") as HTMLInputElement;
+  const shuffleSeedBtn = document.getElementById("shuffleSeedBtn") as HTMLElement;
+  const copySeedBtn = document.getElementById("copySeedBtn") as HTMLElement;
+
+  // Touch tracking for dragging
+  let touchIdentifier: number | null = null;
+
+  // Initialize with a default RNG (will be replaced on game start)
+  let rng = new SeededRandom();
+  
+  // Game State
+  const state: GameState = {
+    mode: "MENU",
+    score: 0,
+    highScore: Number.parseInt(localStorage.getItem("psyduck_infinite_headache_highscore") || "0"),
+    level: 0,
+    seed: "",
+    ducks: [],
+    currentDuck: null,
+    bgRotation: 0,
+    width: window.innerWidth,
+    height: window.innerHeight,
+    baseY: 0,
+    particles: [],
+    gameSpeed: 1,
+    stressLevel: 0,
+    isDragging: false,
+    dragStartX: 0,
+    mergeCount: 0,
+    rng: rng,
+    levelConfigs: generateLevelConfigs(rng, 20),
+    cameraY: 0,
+    targetCameraY: 0,
+    viewportWidth: window.innerWidth,
+    viewportHeight: window.innerHeight,
+    scale: 1,
+    dpr: window.devicePixelRatio || 1,
+    gameOffsetX: 0,
+  };
+
+  const wobblePhysics = new WobblePhysics();
+
+  function getCurrentLevelConfig() {
+    return state.levelConfigs[Math.min(state.level, state.levelConfigs.length - 1)];
+  }
+
+  // --- GAME LOGIC ---
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // Set canvas to full physical resolution for crisp rendering
+    canvas.width = vw * dpr;
+    canvas.height = vh * dpr;
+
+    // Compute game area scaling
+    const effectiveWidth = Math.min(vw, MAX_GAME_WIDTH);
+    const scale = effectiveWidth / DESIGN_WIDTH;
+
+    state.viewportWidth = vw;
+    state.viewportHeight = vh;
+    state.scale = scale;
+    state.dpr = dpr;
+    state.gameOffsetX = (vw - effectiveWidth) / 2;
+
+    // Game logic uses fixed design-space coordinates
+    state.width = DESIGN_WIDTH;
+    state.height = vh / scale;
+    state.baseY = state.height - 100;
+  }
+  window.addEventListener("resize", resize);
+
+  /** Convert screen (CSS pixel) coordinates to design-space coordinates */
+  function screenToDesign(clientX: number, clientY: number) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (clientX - rect.left - state.gameOffsetX) / state.scale,
+      y: (clientY - rect.top) / state.scale,
+    };
+  }
+
+  function initGame(continueFromLevel = false) {
+    resize();
+    initAudio();
+    
+    // Get seed from input or use existing
+    if (!continueFromLevel) {
+      state.score = 0;
+      state.level = 0;
+      
+      // Get seed from input
+      const inputSeed = seedInput?.value?.trim();
+      if (inputSeed) {
+        state.seed = sanitizeSeed(inputSeed);
+      } else {
+        // Generate random seed
+        state.seed = new SeededRandom().seed;
+      }
+      
+      // Create new RNG with seed
+      state.rng = new SeededRandom(state.seed);
+      
+      // Generate level configs from seed
+      state.levelConfigs = generateLevelConfigs(state.rng, 20);
+    }
+    
+    state.ducks = [];
+    state.particles = [];
+    state.stressLevel = 0;
+    state.mergeCount = 0;
+    state.isDragging = false;
+    state.cameraY = 0;
+    state.targetCameraY = 0;
+    wobblePhysics.reset();
+
+    highScoreDisplay.textContent = state.highScore.toString();
+    levelDisplay.textContent = (state.level + 1).toString();
+
+    const levelConfig = getCurrentLevelConfig();
+
+    // Base Duck
+    const baseDuck = new Duck(
+      state.width / 2,
+      state.baseY,
+      true,
+      0,
+      levelConfig.color,
+      levelConfig.secondaryColor
+    );
+    state.ducks.push(baseDuck);
+
+    spawnNewDuck();
+
+    state.mode = "PLAYING";
+    scoreDisplay.textContent = state.score.toString();
+
+    startScreen.classList.add("hidden");
+    levelUpScreen.classList.add("hidden");
+    gameOverScreen.classList.add("hidden");
+    scoreBox.classList.remove("hidden");
+    fadeIn(scoreBox, 300);
+
+    if (stabilityBar) {
+      stabilityBar.style.width = "100%";
+    }
+  }
+
+  function spawnNewDuck() {
+    // Use seeded random for spawn position
+    const spawnX = state.rng.nextFloat(CONFIG.duckBaseWidth, state.width - CONFIG.duckBaseWidth);
+    const spawnY = -CONFIG.duckBaseHeight;
+
+    const mergeLevel = Math.floor(state.mergeCount / CONFIG.mergeThreshold);
+    const levelConfig = getCurrentLevelConfig();
+
+    state.currentDuck = new Duck(
+      spawnX,
+      spawnY,
+      false,
+      mergeLevel,
+      levelConfig.color,
+      levelConfig.secondaryColor
+    );
+  }
+
+  function triggerPerfect(x: number, y: number) {
+    playPerfect();
+
+    // UI Text
+    const el = document.createElement("div");
+    el.className = "perfect-text";
+    el.textContent = "PERFECT!";
+    el.style.left = `${state.viewportWidth / 2}px`;
+    el.style.top = "20%";
+    uiLayer.appendChild(el);
+    
+    // Animate with anime.js
+    animatePerfectText(el);
+    setTimeout(() => el.remove(), 1000);
+
+    // Particles
+    for (let i = 0; i < 20; i++) {
+      state.particles.push(new Particle(x, y, state.rng));
+    }
+  }
+
+  function checkMerge() {
+    // Check if last 5 ducks have same merge level (base duck is excluded from merging)
+    if (state.ducks.length < CONFIG.mergeThreshold + 1) return; // +1 for base duck
+    
+    const lastFive = state.ducks.slice(-CONFIG.mergeThreshold);
+    const mergeLevel = lastFive[0].mergeLevel;
+    
+    // All 5 must have same merge level
+    if (!lastFive.every(d => d.mergeLevel === mergeLevel)) return;
+    
+    // MERGE!
+    playMerge();
+    
+    // Remove last 5 ducks
+    state.ducks.splice(-CONFIG.mergeThreshold, CONFIG.mergeThreshold);
+    
+    // Create merged duck at position of topmost removed duck
+    const topDuck = state.ducks[state.ducks.length - 1];
+    const targetY = topDuck.y - topDuck.h * 0.85;
+    const levelConfig = getCurrentLevelConfig();
+    
+    const mergedDuck = new Duck(
+      lastFive[CONFIG.mergeThreshold - 1].x,
+      targetY,
+      true,
+      mergeLevel + 1,
+      levelConfig.color,
+      levelConfig.secondaryColor
+    );
+    
+    state.ducks.push(mergedDuck);
+    
+    // Particles burst
+    for (let i = 0; i < 40; i++) {
+      state.particles.push(new Particle(mergedDuck.x, mergedDuck.y, state.rng));
+    }
+    
+    // Reset merge count
+    state.mergeCount = 0;
+    
+    // Check if level complete
+    checkLevelComplete(mergedDuck);
+  }
+
+  function checkLevelComplete(mergedDuck: Duck) {
+    // Check if duck fills screen (>15% area or merge level >= 3)
+    const duckArea = mergedDuck.w * mergedDuck.h;
+    const screenArea = state.width * state.height;
+    const areaPercent = duckArea / screenArea;
+    
+    if (areaPercent > 0.15 || mergedDuck.mergeLevel >= 3) {
+      // Level up!
+      state.mode = "LEVELUP";
+      state.level++;
+      playLevelUp();
+      
+      // Update displays
+      newLevelDisplay.textContent = (state.level + 1).toString();
+      const nextLevelConfig = getCurrentLevelConfig();
+      levelNameDisplay.textContent = nextLevelConfig.name;
+      
+      // Show level up screen
+      levelUpScreen.classList.remove("hidden");
+      animateLevelUp(levelUpScreen);
+      
+      // Fade out game UI
+      fadeOut(scoreBox, 300);
+    }
+  }
+
+  function checkCollision() {
+    const falling = state.currentDuck;
+    if (!falling) return;
+
+    const topDuck = state.ducks[state.ducks.length - 1];
+    // Hitbox top
+    const targetY = topDuck.y - topDuck.h * 0.85;
+
+    if (falling.y >= targetY) {
+      const diff = falling.x - topDuck.x;
+      const absDiff = Math.abs(diff);
+      const maxDiff = topDuck.w * CONFIG.hitTolerance;
+
+      if (absDiff < maxDiff) {
+        // LANDED
+        falling.y = targetY; // Snap Y
+
+        // Check PERFECT
+        if (absDiff < CONFIG.perfectTolerance) {
+          falling.x = topDuck.x; // Snap X
+          triggerPerfect(falling.x, falling.y);
+        }
+
+        falling.isStatic = true;
+        falling.isFalling = false;
+        falling.squish();
+        if (topDuck) topDuck.squish(); // Chain reaction squish? Just top one for now.
+
+        state.ducks.push(falling);
+        state.score++;
+        scoreDisplay.textContent = state.score.toString();
+        
+        // Animate score update
+        animateScoreUpdate(scoreDisplay);
+        
+        playLand();
+
+        // Add wobble impulse on land using seeded RNG
+        const imbalance = calculateImbalance(state.ducks);
+        wobblePhysics.addImpulse((state.rng.next() - 0.5) * (1 + imbalance));
+
+        // Increment merge count and check for merge
+        state.mergeCount++;
+        checkMerge();
+
+        // Camera Logic
+        // We want the new top duck to be at ~70% screen height
+        const desiredScreenY = state.height * 0.7;
+        // World Y of duck is falling.y (which is small/negative)
+        // We render at y - cameraY
+        // So: falling.y - cameraY = desiredScreenY
+        // cameraY = falling.y - desiredScreenY
+        state.targetCameraY = falling.y - desiredScreenY;
+
+        // Use seeded spawn timing
+        const levelConfig = getCurrentLevelConfig();
+        const spawnDelay = levelConfig.spawnInterval;
+        
+        setTimeout(() => {
+          if (state.mode === "PLAYING") {
+            spawnNewDuck();
+          }
+        }, spawnDelay);
+      } else {
+        // MISS -> Check if off screen
+        if (falling.y > state.height + state.cameraY + 200) {
+          gameOver();
+        }
+      }
+    }
+  }
+
+  function gameOver() {
+    state.mode = "GAMEOVER";
+    playFail();
+
+    if (state.score > state.highScore) {
+      state.highScore = state.score;
+      localStorage.setItem("psyduck_infinite_headache_highscore", state.score.toString());
+    }
+
+    finalScoreEl.textContent = state.score.toString();
+    finalLevelEl.textContent = (state.level + 1).toString();
+    gameOverSeedEl.textContent = state.seed;
+
+    const puns = [
+      "Too much headache!",
+      "Psy-ai-ai...",
+      "The tower has fallen.",
+      "Confusion hit hard.",
+    ];
+    // Use seeded random for pun selection
+    const punIndex = state.rng.nextInt(0, puns.length);
+    failMessageEl.textContent = puns[punIndex];
+
+    gameOverScreen.classList.remove("hidden");
+    animateGameOver(gameOverScreen);
+  }
+
+  function inputHandler(e: MouseEvent | TouchEvent | KeyboardEvent) {
+    if (
+      e.type === "mousedown" ||
+      e.type === "touchstart" ||
+      (e instanceof KeyboardEvent && e.code === "Space")
+    ) {
+      // Prevent default only on canvas to allow UI interaction
+      if (e.target === canvas) e.preventDefault();
+
+      if (state.mode === "PLAYING" && state.currentDuck && !state.currentDuck.isFalling) {
+        state.currentDuck.isFalling = true;
+        playDrop();
+      }
+    }
+  }
+
+  function startDrag(clientX: number, clientY: number, identifier?: number) {
+    if (state.mode !== "PLAYING" || !state.currentDuck || state.currentDuck.isFalling) return;
+
+    const { x, y } = screenToDesign(clientX, clientY);
+    const worldY = y + state.cameraY;
+
+    // Check if touch is on current duck's tummy
+    if (state.currentDuck.containsPoint(x, worldY)) {
+      state.isDragging = true;
+      state.dragStartX = x - state.currentDuck.x;
+      state.currentDuck.isBeingDragged = true;
+      if (identifier !== undefined) {
+        touchIdentifier = identifier;
+      }
+    }
+  }
+
+  function updateDrag(clientX: number, _clientY: number) {
+    if (!state.isDragging || !state.currentDuck) return;
+
+    const { x } = screenToDesign(clientX, 0);
+
+    // Update duck position, constrained to game area bounds
+    const halfWidth = state.currentDuck.w / 2;
+    state.currentDuck.x = Math.max(halfWidth, Math.min(state.width - halfWidth, x - state.dragStartX));
+  }
+
+  function endDrag() {
+    if (state.isDragging && state.currentDuck) {
+      state.currentDuck.isBeingDragged = false;
+      state.currentDuck.isFalling = true;
+      playDrop();
+    }
+    state.isDragging = false;
+    touchIdentifier = null;
+  }
+
+  // --- RENDER LOOP ---
+
+  function drawBackground() {
+    const vw = state.viewportWidth;
+    const vh = state.viewportHeight;
+    const levelConfig = getCurrentLevelConfig();
+
+    // Background color fills entire viewport
+    ctx.fillStyle = levelConfig.color;
+    ctx.fillRect(0, 0, vw, vh);
+
+    ctx.save();
+    ctx.translate(vw / 2, vh / 2);
+
+    // Rotate background based on score/stress
+    state.bgRotation += 0.002 + state.score * 0.0005;
+    ctx.rotate(state.bgRotation);
+
+    // Spiral with level colors
+    const maxDim = Math.max(vw, vh) * 1.5;
+    const gradient = ctx.createRadialGradient(0, 0, 10, 0, 0, maxDim);
+    gradient.addColorStop(0, levelConfig.secondaryColor);
+    gradient.addColorStop(0.5, levelConfig.color);
+    gradient.addColorStop(1, "#311B92");
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(-maxDim, -maxDim, maxDim * 2, maxDim * 2);
+
+    // Trippy Lines
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.03)";
+    ctx.lineWidth = 40;
+    for (let i = 0; i < 12; i++) {
+      ctx.beginPath();
+      // Pulsing rings
+      const pulse = Math.sin(Date.now() / 1000) * 20;
+      const radius = Math.max(0, i * 120 + pulse);
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  function loop() {
+    // Update
+    if (state.mode === "PLAYING") {
+      if (state.currentDuck) state.currentDuck.update();
+      for (const d of state.ducks) {
+        d.update();
+      }
+      checkCollision();
+
+      // Update wobble physics with seeded RNG
+      const imbalance = calculateImbalance(state.ducks);
+      const topDuck = state.ducks[state.ducks.length - 1];
+      const mergeLevel = topDuck ? topDuck.mergeLevel : 0;
+      wobblePhysics.updateCenterOfMass(state.ducks, state.width / 2);
+      const isStable = wobblePhysics.update(state.ducks.length, imbalance, mergeLevel, state.rng);
+
+      // Update stability bar
+      const wobbleState = wobblePhysics.getState();
+      const stabilityPercent = wobbleState.stability * 100;
+      stabilityBar.style.width = `${stabilityPercent}%`;
+      
+      // Apply stability bar classes
+      stabilityBar.className = "stability-bar";
+      if (stabilityPercent < 30) {
+        stabilityBar.classList.add("critical");
+      } else if (stabilityPercent < 60) {
+        stabilityBar.classList.add("warning");
+      }
+
+      // Check critical instability
+      if (wobblePhysics.isCriticallyUnstable()) {
+        criticalShake(uiLayer);
+        if (!isStable) {
+          gameOver();
+        }
+      }
+
+      // Smooth Camera
+      const diff = state.targetCameraY - state.cameraY;
+      state.cameraY += diff * 0.05; // Smooth ease
+    }
+
+    // Particles
+    for (let i = state.particles.length - 1; i >= 0; i--) {
+      const p = state.particles[i];
+      p.update();
+      if (p.life <= 0) state.particles.splice(i, 1);
+    }
+
+    // Draw - reset transform and clear full physical canvas
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Apply DPR scaling for viewport-space rendering
+    ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+
+    // Background fills entire viewport
+    drawBackground();
+
+    // Game area transform: offset to center + scale to design space + camera
+    ctx.save();
+    ctx.translate(state.gameOffsetX, 0);
+    ctx.scale(state.scale, state.scale);
+    ctx.translate(0, -state.cameraY);
+
+    // Apply wobble transform to tower
+    if (state.mode === "PLAYING" && state.ducks.length > 1) {
+      applyWobbleTransform(ctx, wobblePhysics, state.width / 2, state.baseY);
+    }
+
+    // Platform
+    ctx.fillStyle = "#FFC107";
+    ctx.fillRect(0, state.baseY + CONFIG.duckBaseHeight / 2, state.width, 1000);
+
+    // Ducks
+    for (const duck of state.ducks) {
+      duck.draw(ctx, state.score);
+    }
+    if (state.currentDuck) state.currentDuck.draw(ctx, state.score);
+
+    // Particles (World Space)
+    for (const p of state.particles) {
+      p.draw(ctx);
+    }
+
+    // Restore wobble transform
+    if (state.mode === "PLAYING" && state.ducks.length > 1) {
+      restoreWobbleTransform(ctx);
+    }
+
+    ctx.restore();
+
+    requestAnimationFrame(loop);
+  }
+
+  // Inputs
+  window.addEventListener("keydown", (e) => {
+    if (e.code === "Space") inputHandler(e);
+  });
+
+  // Touch/Click on canvas
+  canvas.addEventListener("mousedown", inputHandler);
+  canvas.addEventListener("touchstart", inputHandler, { passive: false });
+
+  // Drag handlers - Mouse
+  canvas.addEventListener("mousedown", (e) => {
+    startDrag(e.clientX, e.clientY);
+  });
+
+  canvas.addEventListener("mousemove", (e) => {
+    if (state.isDragging) {
+      updateDrag(e.clientX, e.clientY);
+    }
+  });
+
+  canvas.addEventListener("mouseup", () => {
+    endDrag();
+  });
+
+  canvas.addEventListener("mouseleave", () => {
+    endDrag();
+  });
+
+  // Drag handlers - Touch
+  canvas.addEventListener("touchstart", (e) => {
+    if (e.touches.length > 0) {
+      const touch = e.touches[0];
+      startDrag(touch.clientX, touch.clientY, touch.identifier);
+    }
+  }, { passive: false });
+
+  canvas.addEventListener("touchmove", (e) => {
+    if (state.isDragging && touchIdentifier !== null) {
+      for (let i = 0; i < e.touches.length; i++) {
+        if (e.touches[i].identifier === touchIdentifier) {
+          updateDrag(e.touches[i].clientX, e.touches[i].clientY);
+          break;
+        }
+      }
+    }
+  }, { passive: false });
+
+  canvas.addEventListener("touchend", (e) => {
+    if (touchIdentifier !== null) {
+      let touchEnded = true;
+      for (let i = 0; i < e.touches.length; i++) {
+        if (e.touches[i].identifier === touchIdentifier) {
+          touchEnded = false;
+          break;
+        }
+      }
+      if (touchEnded) {
+        endDrag();
+      }
+    }
+  }, { passive: false });
+
+  canvas.addEventListener("touchcancel", () => {
+    endDrag();
+  }, { passive: false });
+
+  // UI Buttons
+  document.getElementById("startBtn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    initGame();
+  });
+
+  document.getElementById("restartBtn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    initGame();
+  });
+
+  document.getElementById("continueLevelBtn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    initGame(true);
+  });
+
+  shuffleSeedBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const newSeed = new SeededRandom().seed;
+    seedInput.value = newSeed;
+  });
+
+  copySeedBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const originalText = copySeedBtn.textContent;
+    navigator.clipboard.writeText(state.seed).then(() => {
+      copySeedBtn.textContent = "✓";
+      setTimeout(() => {
+        copySeedBtn.textContent = originalText;
+      }, 1000);
+    }).catch((error) => {
+      // Fallback: show error state briefly
+      console.error("Failed to copy seed:", error);
+      copySeedBtn.textContent = "✗";
+      setTimeout(() => {
+        copySeedBtn.textContent = originalText;
+      }, 1000);
+    });
+  });
+
+  // Initialize view
+  resize();
+  ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+  drawBackground(); // Draw once before loop starts
+  loop(); // Start loop immediately so background animates
+
+  // Signal that the game module has fully loaded
+  document.body.dataset.gameReady = "true";
+</script>

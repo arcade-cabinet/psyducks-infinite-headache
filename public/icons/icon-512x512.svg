@@ -1,0 +1,10 @@
+<svg width="192" height="192" xmlns="http://www.w3.org/2000/svg">
+  <rect width="192" height="192" fill="#4A148C"/>
+  <circle cx="96" cy="96" r="70" fill="#FDD835"/>
+  <circle cx="76" cy="80" r="10" fill="white"/>
+  <circle cx="116" cy="80" r="10" fill="white"/>
+  <circle cx="76" cy="80" r="4" fill="black"/>
+  <circle cx="116" cy="80" r="4" fill="black"/>
+  <ellipse cx="96" cy="110" rx="20" ry="10" fill="#FFE082"/>
+  <text x="96" y="160" font-size="24" fill="#FDD835" text-anchor="middle" font-family="Arial, sans-serif" font-weight="bold">STACK</text>
+</svg>

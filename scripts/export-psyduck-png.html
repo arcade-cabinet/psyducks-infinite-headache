@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Psyduck PNG Exporter</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      font-size: 2.5rem;
+      margin-bottom: 30px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+    .controls {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+    .control-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: inline-block;
+      width: 150px;
+      font-weight: bold;
+    }
+    input[type="number"], input[type="color"], select {
+      padding: 8px;
+      border-radius: 6px;
+      border: none;
+      font-size: 14px;
+    }
+    button {
+      background: #FDD835;
+      color: #4A148C;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 5px;
+      transition: transform 0.1s;
+    }
+    button:hover {
+      transform: scale(1.05);
+    }
+    button:active {
+      transform: scale(0.95);
+    }
+    .canvas-container {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .canvas-wrapper {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+    }
+    canvas {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .canvas-label {
+      margin-top: 10px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    .export-buttons {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .info {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🦆 Psyduck PNG Exporter</h1>
+    
+    <div class="controls">
+      <div class="control-group">
+        <label>Scale:</label>
+        <input type="number" id="scale" value="3" min="1" max="10" step="0.5">
+        <span>(Higher = bigger duck)</span>
+      </div>
+      <div class="control-group">
+        <label>Primary Color:</label>
+        <input type="color" id="primaryColor" value="#FFD54F">
+      </div>
+      <div class="control-group">
+        <label>Secondary Color:</label>
+        <input type="color" id="secondaryColor" value="#FFAB00">
+      </div>
+      <div class="control-group">
+        <label>Pose:</label>
+        <select id="pose">
+          <option value="normal">Normal</option>
+          <option value="headache">Headache (hands on head)</option>
+          <option value="happy">Happy</option>
+          <option value="confused">Confused</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>Merge Level:</label>
+        <input type="number" id="mergeLevel" value="0" min="0" max="5">
+        <span>(Adds ★ indicators)</span>
+      </div>
+      <button onclick="renderAll()">🔄 Refresh Render</button>
+    </div>
+
+    <div class="canvas-container">
+      <div class="canvas-wrapper">
+        <canvas id="iconCanvas" width="512" height="512"></canvas>
+        <div class="canvas-label">App Icon (512x512)</div>
+        <button onclick="exportCanvas('iconCanvas', 'psyduck-icon-512.png')">💾 Export Icon</button>
+      </div>
+      
+      <div class="canvas-wrapper">
+        <canvas id="mastheadCanvas" width="800" height="400"></canvas>
+        <div class="canvas-label">Masthead/Logo (800x400)</div>
+        <button onclick="exportCanvas('mastheadCanvas', 'psyduck-masthead.png')">💾 Export Masthead</button>
+      </div>
+      
+      <div class="canvas-wrapper">
+        <canvas id="spriteCanvas" width="400" height="400"></canvas>
+        <div class="canvas-label">Sprite (400x400)</div>
+        <button onclick="exportCanvas('spriteCanvas', 'psyduck-sprite.png')">💾 Export Sprite</button>
+      </div>
+    </div>
+
+    <div class="info">
+      <strong>💡 Usage Tips:</strong><br>
+      • All exports have transparent backgrounds<br>
+      • Icon: Use for PWA app icons and favicons<br>
+      • Masthead: Use for main menu header/logo<br>
+      • Sprite: Use for static duck images in UI<br>
+      • Adjust colors to match your level themes<br>
+      • Merge level adds stars (★) above the duck
+    </div>
+  </div>
+
+  <script>
+    // Psyduck drawing function (extracted from game.ts)
+    function drawPsyduck(ctx, x, y, w, h, primaryColor, secondaryColor, pose, mergeLevel, scale = 1) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(scale, scale);
+      
+      // Body
+      ctx.fillStyle = primaryColor;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, w * 0.35, h * 0.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Head
+      ctx.beginPath();
+      ctx.ellipse(0, -h * 0.25, w * 0.3, h * 0.28, 0, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Beak
+      ctx.fillStyle = secondaryColor;
+      ctx.beginPath();
+      ctx.ellipse(0, -h * 0.2, w * 0.15, h * 0.08, 0, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Top beak line
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.15, -h * 0.2);
+      ctx.lineTo(w * 0.15, -h * 0.2);
+      ctx.stroke();
+      
+      // Eyes
+      ctx.fillStyle = '#fff';
+      const eyeY = -h * 0.3;
+      ctx.beginPath();
+      ctx.ellipse(-w * 0.12, eyeY, w * 0.1, h * 0.1, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(w * 0.12, eyeY, w * 0.1, h * 0.1, 0, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Pupils
+      ctx.fillStyle = '#000';
+      const pupilOffset = pose === 'confused' ? w * 0.03 : 0;
+      ctx.beginPath();
+      ctx.arc(-w * 0.12 + pupilOffset, eyeY, w * 0.04, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(w * 0.12 + pupilOffset, eyeY, w * 0.04, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Hair tufts
+      ctx.fillStyle = primaryColor;
+      for (let i = 0; i < 3; i++) {
+        const tuftX = (i - 1) * w * 0.12;
+        ctx.beginPath();
+        ctx.ellipse(tuftX, -h * 0.45, w * 0.08, h * 0.12, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+      // Arms (pose-dependent)
+      ctx.strokeStyle = primaryColor;
+      ctx.lineWidth = w * 0.08;
+      ctx.lineCap = 'round';
+      
+      if (pose === 'headache') {
+        // Hands on head (headache pose)
+        ctx.beginPath();
+        ctx.moveTo(-w * 0.35, h * 0.1);
+        ctx.lineTo(-w * 0.25, -h * 0.15);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(w * 0.35, h * 0.1);
+        ctx.lineTo(w * 0.25, -h * 0.15);
+        ctx.stroke();
+      } else {
+        // Normal arms
+        ctx.beginPath();
+        ctx.moveTo(-w * 0.35, h * 0.1);
+        ctx.lineTo(-w * 0.4, h * 0.3);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(w * 0.35, h * 0.1);
+        ctx.lineTo(w * 0.4, h * 0.3);
+        ctx.stroke();
+      }
+      
+      // Feet
+      ctx.fillStyle = secondaryColor;
+      const footY = h * 0.38;
+      ctx.beginPath();
+      ctx.ellipse(-w * 0.15, footY, w * 0.12, h * 0.08, 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(w * 0.15, footY, w * 0.12, h * 0.08, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Psychic wave (if headache pose)
+      if (pose === 'headache') {
+        ctx.strokeStyle = 'rgba(147, 51, 234, 0.3)';
+        ctx.lineWidth = 3;
+        for (let i = 0; i < 3; i++) {
+          const radius = w * 0.5 + i * w * 0.15;
+          ctx.beginPath();
+          ctx.arc(0, -h * 0.25, radius, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+      
+      // Merge level stars
+      if (mergeLevel > 0) {
+        ctx.fillStyle = '#FDD835';
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        const starY = -h * 0.55;
+        const starSpacing = w * 0.15;
+        const startX = -(mergeLevel - 1) * starSpacing / 2;
+        
+        for (let i = 0; i < mergeLevel; i++) {
+          const starX = startX + i * starSpacing;
+          drawStar(ctx, starX, starY, w * 0.08, 5);
+        }
+      }
+      
+      ctx.restore();
+    }
+    
+    function drawStar(ctx, x, y, radius, points) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.beginPath();
+      for (let i = 0; i < points * 2; i++) {
+        const angle = (i * Math.PI) / points - Math.PI / 2;
+        const r = i % 2 === 0 ? radius : radius * 0.4;
+        const px = r * Math.cos(angle);
+        const py = r * Math.sin(angle);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+    
+    function renderIcon() {
+      const canvas = document.getElementById('iconCanvas');
+      const ctx = canvas.getContext('2d');
+      const scale = parseFloat(document.getElementById('scale').value);
+      const primaryColor = document.getElementById('primaryColor').value;
+      const secondaryColor = document.getElementById('secondaryColor').value;
+      const pose = document.getElementById('pose').value;
+      const mergeLevel = parseInt(document.getElementById('mergeLevel').value);
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawPsyduck(ctx, 256, 256, 80, 70, primaryColor, secondaryColor, pose, mergeLevel, scale);
+    }
+    
+    function renderMasthead() {
+      const canvas = document.getElementById('mastheadCanvas');
+      const ctx = canvas.getContext('2d');
+      const scale = parseFloat(document.getElementById('scale').value);
+      const primaryColor = document.getElementById('primaryColor').value;
+      const secondaryColor = document.getElementById('secondaryColor').value;
+      const pose = document.getElementById('pose').value;
+      const mergeLevel = parseInt(document.getElementById('mergeLevel').value);
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw title
+      ctx.fillStyle = '#4A148C';
+      ctx.font = 'bold 72px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText("PSYDUCK'S", 400, 100);
+      ctx.fillText("INFINITE HEADACHE", 400, 180);
+      
+      // Draw duck next to title
+      drawPsyduck(ctx, 150, 280, 80, 70, primaryColor, secondaryColor, 'headache', 0, scale * 0.8);
+      drawPsyduck(ctx, 650, 280, 80, 70, primaryColor, secondaryColor, 'headache', 0, scale * 0.8);
+    }
+    
+    function renderSprite() {
+      const canvas = document.getElementById('spriteCanvas');
+      const ctx = canvas.getContext('2d');
+      const scale = parseFloat(document.getElementById('scale').value);
+      const primaryColor = document.getElementById('primaryColor').value;
+      const secondaryColor = document.getElementById('secondaryColor').value;
+      const pose = document.getElementById('pose').value;
+      const mergeLevel = parseInt(document.getElementById('mergeLevel').value);
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawPsyduck(ctx, 200, 200, 80, 70, primaryColor, secondaryColor, pose, mergeLevel, scale);
+    }
+    
+    function renderAll() {
+      renderIcon();
+      renderMasthead();
+      renderSprite();
+    }
+    
+    function exportCanvas(canvasId, filename) {
+      const canvas = document.getElementById(canvasId);
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      }, 'image/png');
+    }
+    
+    // Add event listeners
+    document.querySelectorAll('input, select').forEach(el => {
+      el.addEventListener('input', renderAll);
+    });
+    
+    // Initial render
+    renderAll();
+  </script>
+</body>
+</html>

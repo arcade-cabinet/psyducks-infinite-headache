@@ -1,0 +1,45 @@
+{
+  "name": "psyduck-stack",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Psyduck's Infinite Headache Tower - A stacking game PWA built with Astro",
+  "packageManager": "pnpm@10.2.0",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.2.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check && biome check .",
+    "format": "biome format --write .",
+    "lint": "biome lint .",
+    "test": "pnpm test:unit && pnpm test:e2e",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "export:psyduck": "echo 'Opening PNG exporter...' && open scripts/export-psyduck-png.html || xdg-open scripts/export-psyduck-png.html || start scripts/export-psyduck-png.html"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.7.0",
+    "@fontsource/fredoka-one": "^5.2.5",
+    "@vite-pwa/astro": "^0.4.3",
+    "animejs": "^4.3.5",
+    "astro": "^5.17.1",
+    "seedrandom": "^3.0.5",
+    "tone": "^15.1.22"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.6",
+    "@biomejs/biome": "^2.3.13",
+    "@playwright/test": "^1.58.1",
+    "@types/node": "^22.19.7",
+    "@types/seedrandom": "^3.0.8",
+    "jsdom": "^27.4.0",
+    "typescript": "^5.9.3",
+    "vitest": "^2.1.9",
+    "yuka": "^0.7.8"
+  }
+}
