@@ -111,8 +111,10 @@ describe("Duck Class", () => {
 });
 
 describe("Particle Class", () => {
+  const rng = new SeededRandom("test-seed");
+
   it("should initialize with correct properties", () => {
-    const particle = new Particle(100, 200);
+    const particle = new Particle(100, 200, rng);
     expect(particle.x).toBe(100);
     expect(particle.y).toBe(200);
     expect(particle.life).toBe(1.0);
@@ -122,7 +124,7 @@ describe("Particle Class", () => {
   });
 
   it("should update position and life", () => {
-    const particle = new Particle(100, 200);
+    const particle = new Particle(100, 200, rng);
     const initialLife = particle.life;
     const initialX = particle.x;
     const initialY = particle.y;
@@ -136,7 +138,7 @@ describe("Particle Class", () => {
   });
 
   it("should decay life over time", () => {
-    const particle = new Particle(100, 200);
+    const particle = new Particle(100, 200, rng);
 
     // Update many times
     for (let i = 0; i < 40; i++) {

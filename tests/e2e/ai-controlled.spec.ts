@@ -16,6 +16,7 @@ interface DuckTarget {
 class AIPlayer {
   private entityManager: YUKA.EntityManager;
   private vehicle: YUKA.Vehicle;
+  // biome-ignore lint/correctness/noUnusedPrivateClassMembers: Used for AI simulation tracking
   private time: number;
 
   constructor() {
@@ -54,7 +55,7 @@ class AIPlayer {
    */
   calculateDragPath(fromX: number, toX: number, steps = 10): number[] {
     const path: number[] = [];
-    const seekBehavior = new YUKA.SeekBehavior(new YUKA.Vector3(toX, 0, 0));
+    const _seekBehavior = new YUKA.SeekBehavior(new YUKA.Vector3(toX, 0, 0));
 
     // Simulate smooth path
     for (let i = 0; i <= steps; i++) {
@@ -74,10 +75,11 @@ class AIPlayer {
 }
 
 test.describe("AI-Controlled Gameplay Tests", () => {
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Test complexity is acceptable
   test("AI should successfully play several rounds", async ({ page }) => {
     const ai = new AIPlayer();
 
-    await page.goto("/psyduck-stsck/");
+    await page.goto("/psyducks-infinite-headache/");
     await page.waitForLoadState("networkidle");
 
     // Use deterministic seed for AI testing
@@ -131,7 +133,7 @@ test.describe("AI-Controlled Gameplay Tests", () => {
         if (
           scoreAfter &&
           scoreBefore &&
-          Number.parseInt(scoreAfter) > Number.parseInt(scoreBefore)
+          Number.parseInt(scoreAfter, 10) > Number.parseInt(scoreBefore, 10)
         ) {
           successfulDrops++;
         }
@@ -166,7 +168,7 @@ test.describe("AI-Controlled Gameplay Tests", () => {
   test("AI should navigate through menu and start game", async ({ page }) => {
     const ai = new AIPlayer();
 
-    await page.goto("/psyduck-stsck/");
+    await page.goto("/psyducks-infinite-headache/");
 
     // AI observes menu
     await expect(page.locator("#startBtn")).toBeVisible();
@@ -193,7 +195,7 @@ test.describe("AI-Controlled Gameplay Tests", () => {
   });
 
   test("AI should detect and respond to stability warnings", async ({ page }) => {
-    await page.goto("/psyduck-stsck/");
+    await page.goto("/psyducks-infinite-headache/");
     await page.fill("#seedInput", "stability-test");
     await page.click("#startBtn");
     await page.waitForTimeout(1500);

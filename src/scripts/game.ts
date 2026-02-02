@@ -184,7 +184,7 @@ export function drawPsyduck(
 
   // Eyes
   ctx.fillStyle = "#FFF";
-  // Blink Logic (time-based)
+  // Blink Logic (deterministic based on time, not randomized)
   const blink = Math.sin(Date.now() / 3000) > 0.98;
 
   if (blink && !isHeadache) {
@@ -247,14 +247,14 @@ export class Particle {
   color: string;
   size: number;
 
-  constructor(x: number, y: number) {
+  constructor(x: number, y: number, rng: SeededRandom) {
     this.x = x;
     this.y = y;
-    this.vx = (Math.random() - 0.5) * 10;
-    this.vy = (Math.random() - 0.5) * 10;
+    this.vx = (rng.next() - 0.5) * 10;
+    this.vy = (rng.next() - 0.5) * 10;
     this.life = 1.0;
-    this.color = Math.random() > 0.5 ? "#FFF" : "#FDD835";
-    this.size = Math.random() * 5 + 2;
+    this.color = rng.next() > 0.5 ? "#FFF" : "#FDD835";
+    this.size = rng.next() * 5 + 2;
   }
 
   update() {

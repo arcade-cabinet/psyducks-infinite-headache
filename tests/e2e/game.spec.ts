@@ -1,13 +1,13 @@
 import { expect, test } from "@playwright/test";
 
-test.describe("Psyduck Stack Game", () => {
+test.describe("Psyduck's Infinite Headache Game", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/psyduck-stsck/");
+    await page.goto("/psyducks-infinite-headache/");
   });
 
   test("should load the game page correctly", async ({ page }) => {
     // Check if the page title is correct
-    await expect(page).toHaveTitle(/Psyduck Stack/);
+    await expect(page).toHaveTitle(/Psyduck/);
 
     // Check if canvas exists
     const canvas = page.locator("#gameCanvas");
@@ -20,7 +20,6 @@ test.describe("Psyduck Stack Game", () => {
     // Check if title is present
     const title = page.locator(".title");
     await expect(title).toContainText("PSYDUCK");
-    await expect(title).toContainText("STACK");
   });
 
   test("should have start button", async ({ page }) => {

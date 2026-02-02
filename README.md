@@ -1,6 +1,6 @@
-# Psyduck Stack
+# Psyduck's Infinite Headache
 
-🦆 **Psyduck's Infinite Headache Tower** - A progressive web app stacking game built with Astro.
+🦆 **Psyduck's Infinite Headache** - A progressive web app stacking game built with Astro.
 
 ## Overview
 
@@ -135,7 +135,7 @@ The project automatically deploys to GitHub Pages via GitHub Actions when change
 ### CD Pipeline
 - Builds production bundle
 - Deploys to GitHub Pages
-- Available at: [https://arcade-cabinet.github.io/psyduck-stsck/](https://arcade-cabinet.github.io/psyduck-stsck/)
+- Available at: [https://arcade-cabinet.github.io/psyducks-infinite-headache/](https://arcade-cabinet.github.io/psyducks-infinite-headache/)
 
 ## PWA Features
 

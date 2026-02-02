@@ -32,7 +32,7 @@ export class WobblePhysics {
   /**
    * Update wobble physics
    */
-  update(stackHeight: number, imbalance: number, mergeLevel: number) {
+  update(stackHeight: number, imbalance: number, mergeLevel: number, rng: { next: () => number }) {
     // Calculate instability based on height and imbalance
     this.instability = Math.min(1, stackHeight * 0.1 + imbalance * 2);
 
@@ -40,8 +40,8 @@ export class WobblePhysics {
     const sizeStability = 1 / (1 + mergeLevel * 0.5);
     this.instability *= sizeStability;
 
-    // Add random perturbations (wind, headache shakes)
-    const randomForce = (Math.random() - 0.5) * this.instability * 0.01;
+    // Add random perturbations (wind, headache shakes) using seeded RNG
+    const randomForce = (rng.next() - 0.5) * this.instability * 0.01;
 
     // Restoring force (tries to bring tower back to upright)
     const restoringForce = -this.angle * this.restoring * (1 - this.instability);
@@ -97,7 +97,7 @@ export class WobblePhysics {
     const restoringForce = -this.angle * this.restoring * (1 - this.instability);
     const massForce = this.centerOfMassOffset * 0.001 * this.instability;
     const angularAcceleration = restoringForce + massForce;
-    
+
     return {
       angle: this.angle,
       angularVelocity: this.angularVelocity,

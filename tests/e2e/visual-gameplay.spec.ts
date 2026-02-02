@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 
-test.describe("Psyduck Stack - Visual & Gameplay Tests", () => {
+test.describe("Psyduck's Infinite Headache - Visual & Gameplay Tests", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/psyduck-stsck/");
+    await page.goto("/psyducks-infinite-headache/");
   });
 
   test("should capture main menu screenshot", async ({ page }) => {

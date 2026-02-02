@@ -1,8 +1,8 @@
 {
-  "name": "psyduck-stack",
+  "name": "psyducks-infinite-headache",
   "type": "module",
   "version": "1.0.0",
-  "description": "Psyduck's Infinite Headache Tower - A stacking game PWA built with Astro",
+  "description": "Psyduck's Infinite Headache - A stacking game where the headache never ends",
   "packageManager": "pnpm@10.2.0",
   "engines": {
     "node": ">=22.0.0",
@@ -32,6 +32,7 @@
     "tone": "^15.1.22"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.6",
     "@biomejs/biome": "^2.3.0",
     "@playwright/test": "^1.49.1",
     "@types/node": "^22.10.5",
