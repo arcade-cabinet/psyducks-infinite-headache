@@ -19,7 +19,8 @@
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "export:psyduck": "echo 'Opening PNG exporter...' && open scripts/export-psyduck-png.html || xdg-open scripts/export-psyduck-png.html || start scripts/export-psyduck-png.html"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.0",

@@ -53,6 +53,25 @@ pnpm preview
 - `pnpm test:unit:watch` - Run unit tests in watch mode
 - `pnpm test:e2e` - Run Playwright E2E tests
 - `pnpm test:e2e:ui` - Run E2E tests with Playwright UI
+- `pnpm export:psyduck` - Open PNG exporter tool (dev utility)
+
+### PNG Exporter Tool
+
+The project includes a dev utility for exporting high-quality Psyduck sprites as PNG files with transparent backgrounds:
+
+```bash
+pnpm export:psyduck
+```
+
+This opens an interactive HTML tool where you can:
+- Adjust duck size, colors, and pose
+- Set merge level (adds ★ indicators)
+- Export as:
+  - **App Icon** (512x512) - For PWA icons and favicons
+  - **Masthead/Logo** (800x400) - For main menu header
+  - **Sprite** (400x400) - For static UI elements
+
+All exports have transparent backgrounds and can be customized to match level themes.
 
 ### Testing
 
