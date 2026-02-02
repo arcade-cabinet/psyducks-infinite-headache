@@ -1,9 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
 // Detect if running in GitHub Copilot environment
-const isGitHubCopilot = !!process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN || 
-                         !!process.env.COPILOT_INSTANCE_ID ||
-                         !!process.env.GITHUB_WORKSPACE;
+const isGitHubCopilot =
+  !!process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN ||
+  !!process.env.COPILOT_INSTANCE_ID ||
+  !!process.env.GITHUB_WORKSPACE;
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -59,7 +60,7 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: "pnpm build && pnpm preview",
+    command: "pnpm build && pnpm preview --port 4321",
     url: "http://localhost:4321",
     reuseExistingServer: !process.env.CI,
     timeout: 120000,

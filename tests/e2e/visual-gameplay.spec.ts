@@ -25,7 +25,7 @@ test.describe("Psyduck Stack - Visual & Gameplay Tests", () => {
   test("should capture main menu with seed input", async ({ page }) => {
     // Enter a test seed
     await page.fill("#seedInput", "cosmic-electric-tower");
-    
+
     await page.screenshot({
       path: "test-results/screenshots/main-menu-with-seed.png",
       fullPage: true,
@@ -67,7 +67,7 @@ test.describe("Psyduck Stack - Visual & Gameplay Tests", () => {
     await page.waitForTimeout(1000);
 
     const canvas = page.locator("#gameCanvas");
-    
+
     // Get canvas bounding box
     const box = await canvas.boundingBox();
     if (!box) throw new Error("Canvas not found");
@@ -89,11 +89,11 @@ test.describe("Psyduck Stack - Visual & Gameplay Tests", () => {
 
   test("should test shuffle seed functionality", async ({ page }) => {
     const seedInput = page.locator("#seedInput");
-    
+
     // Click shuffle button
     await page.click("#shuffleSeedBtn");
     await page.waitForTimeout(100);
-    
+
     // Verify seed was generated
     const seedValue = await seedInput.inputValue();
     expect(seedValue).toBeTruthy();
@@ -120,7 +120,7 @@ test.describe("Psyduck Stack - Visual & Gameplay Tests", () => {
       // Click far from center to miss
       await page.mouse.click(box.x + 50, box.y + box.height * 0.5);
       await page.waitForTimeout(2000);
-      
+
       // Check if game over screen appeared
       const gameOverVisible = await page.locator("#game-over-screen").isVisible();
       if (gameOverVisible) break;
@@ -156,12 +156,10 @@ test.describe("Psyduck Stack - Visual & Gameplay Tests", () => {
 
     const stabilityBar = page.locator("#stabilityBar");
     await expect(stabilityBar).toBeVisible();
-    
+
     // Get initial width
-    const initialWidth = await stabilityBar.evaluate((el) => 
-      getComputedStyle(el).width
-    );
-    
+    const initialWidth = await stabilityBar.evaluate((el) => getComputedStyle(el).width);
+
     expect(initialWidth).toBeTruthy();
 
     await page.screenshot({

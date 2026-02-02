@@ -4,6 +4,7 @@
 import * as animeModule from "animejs";
 
 // anime.js v4 exports differently - access the default function
+// biome-ignore lint/suspicious/noExplicitAny: anime.js has complex type exports
 const anime = (animeModule as any).default || animeModule;
 
 /**
@@ -87,7 +88,7 @@ export function animateDuckSquish(element: HTMLElement) {
  * Pulse animation for high score
  */
 export function pulseHighScore(element: HTMLElement) {
-  anime({
+  return anime({
     targets: element,
     scale: [1, 1.1, 1],
     duration: 800,
@@ -181,7 +182,9 @@ export function createParticleBurst(container: HTMLElement, x: number, y: number
     duration: 1000,
     easing: "easeOutQuad",
     complete: () => {
-      particles.forEach((p) => p.remove());
+      for (const p of particles) {
+        p.remove();
+      }
     },
   });
 }

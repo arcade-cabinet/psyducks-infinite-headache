@@ -46,7 +46,7 @@ export default defineConfig({
   ],
   vite: {
     build: {
-      sourcemap: true,
+      sourcemap: process.env.NODE_ENV !== "production",
     },
   },
 });

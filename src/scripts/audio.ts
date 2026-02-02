@@ -4,10 +4,25 @@
 import * as Tone from "tone";
 
 let isInitialized = false;
+const dropSynthPool: Tone.Synth[] = [];
 
 export async function initAudio() {
   if (!isInitialized) {
     await Tone.start();
+    // Initialize synth pool for drop sound
+    for (let i = 0; i < 3; i++) {
+      const synth = new Tone.Synth({
+        oscillator: { type: "sine" },
+        envelope: {
+          attack: 0.001,
+          decay: 0.15,
+          sustain: 0,
+          release: 0.15,
+        },
+      }).toDestination();
+      synth.volume.value = -10;
+      dropSynthPool.push(synth);
+    }
     isInitialized = true;
   }
 }
@@ -16,25 +31,12 @@ export async function initAudio() {
  * Play drop sound - descending pitch
  */
 export function playDrop() {
-  if (!isInitialized) return;
+  if (!isInitialized || dropSynthPool.length === 0) return;
 
-  const synth = new Tone.Synth({
-    oscillator: { type: "sine" },
-    envelope: {
-      attack: 0.001,
-      decay: 0.15,
-      sustain: 0,
-      release: 0.15,
-    },
-  }).toDestination();
-
+  const synth = dropSynthPool[0];
   const now = Tone.now();
   synth.triggerAttackRelease("400Hz", "0.15", now);
   synth.frequency.exponentialRampTo("100Hz", 0.15, now);
-  synth.volume.value = -10;
-
-  // Cleanup
-  setTimeout(() => synth.dispose(), 200);
 }
 
 /**
@@ -232,7 +234,9 @@ export function playLevelUp() {
  * Play ambient background music (optional - can be enabled)
  */
 export function playBackgroundMusic(enable = false) {
-  if (!isInitialized || !enable) return;
+  if (!isInitialized || !enable) {
+    return () => {}; // Return no-op cleanup function
+  }
 
   // Create a simple ambient loop
   const synth = new Tone.PolySynth(Tone.Synth, {

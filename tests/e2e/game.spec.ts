@@ -33,10 +33,7 @@ test.describe("Psyduck Stack Game", () => {
     // Click the start button
     await page.locator("#startBtn").click();
 
-    // Wait a bit for game to initialize
-    await page.waitForTimeout(500);
-
-    // Start screen should be hidden
+    // Wait for start screen to be hidden
     const startScreen = page.locator("#start-screen");
     await expect(startScreen).toBeHidden();
 
@@ -81,26 +78,27 @@ test.describe("Psyduck Stack Game", () => {
   test("should show game over screen on miss", async ({ page }) => {
     // Start the game
     await page.locator("#startBtn").click();
-    await page.waitForTimeout(500);
+    await expect(page.locator("#start-screen")).toBeHidden();
 
     // Click multiple times at edges to likely cause misses
+    const gameOverScreen = page.locator("#game-over-screen");
+
     for (let i = 0; i < 5; i++) {
       await page.locator("#gameCanvas").click({ position: { x: 50, y: 300 } });
-      await page.waitForTimeout(2000);
 
-      // Check if game over screen appeared
-      const isGameOver = await page.locator("#game-over-screen").isVisible();
-      if (isGameOver) {
+      // Wait for either game over or next spawn (max 3 seconds)
+      try {
+        await expect(gameOverScreen).toBeVisible({ timeout: 3000 });
         break;
+      } catch {
+        // Continue to next iteration if game over not shown yet
       }
     }
 
-    // After several attempts, check for game over elements
-    const gameOverScreen = page.locator("#game-over-screen");
+    // Check for game over elements
     const restartButton = page.locator("#restartBtn");
-
-    // Game over screen might be visible
     const gameOverVisible = await gameOverScreen.isVisible();
+
     if (gameOverVisible) {
       await expect(restartButton).toBeVisible();
       await expect(restartButton).toContainText("RETRY");
@@ -110,24 +108,29 @@ test.describe("Psyduck Stack Game", () => {
   test("should restart game when retry button is clicked", async ({ page }) => {
     // Start the game
     await page.locator("#startBtn").click();
-    await page.waitForTimeout(500);
+    await expect(page.locator("#start-screen")).toBeHidden();
 
     // Cause game over by clicking at edge multiple times
+    const gameOverScreen = page.locator("#game-over-screen");
+
     for (let i = 0; i < 8; i++) {
       await page.locator("#gameCanvas").click({ position: { x: 10, y: 300 } });
-      await page.waitForTimeout(1500);
+
+      // Check if game over appeared
+      try {
+        await expect(gameOverScreen).toBeVisible({ timeout: 2000 });
+        break;
+      } catch {
+        // Continue trying
+      }
     }
 
-    // Wait for potential game over
-    await page.waitForTimeout(1000);
+    // Wait for game over screen or timeout
+    const isGameOver = await gameOverScreen.isVisible();
 
-    // If game over screen is visible, click retry
-    const gameOverScreen = page.locator("#game-over-screen");
-    if (await gameOverScreen.isVisible()) {
+    // If game over screen is visible, test restart functionality
+    if (isGameOver) {
       await page.locator("#restartBtn").click();
-      await page.waitForTimeout(500);
-
-      // Game over screen should be hidden
       await expect(gameOverScreen).toBeHidden();
 
       // Score should be reset to 0

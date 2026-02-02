@@ -4,8 +4,8 @@ import { SeededRandom } from "@/scripts/seededRandom";
 
 describe("Game Configuration", () => {
   it("should have valid configuration values", () => {
-    expect(CONFIG.duckWidth).toBe(80);
-    expect(CONFIG.duckHeight).toBe(70);
+    expect(CONFIG.duckBaseWidth).toBe(80);
+    expect(CONFIG.duckBaseHeight).toBe(70);
     expect(CONFIG.gravity).toBeGreaterThan(0);
     expect(CONFIG.perfectTolerance).toBeGreaterThan(0);
     expect(CONFIG.hitTolerance).toBeGreaterThan(0);
@@ -18,8 +18,8 @@ describe("Duck Class", () => {
     const duck = new Duck(100, 200, false, 0);
     expect(duck.x).toBe(100);
     expect(duck.y).toBe(200);
-    expect(duck.w).toBe(CONFIG.duckWidth);
-    expect(duck.h).toBe(CONFIG.duckHeight);
+    expect(duck.w).toBe(CONFIG.duckBaseWidth);
+    expect(duck.h).toBe(CONFIG.duckBaseHeight);
     expect(duck.isStatic).toBe(false);
     expect(duck.isFalling).toBe(false);
   });
@@ -75,7 +75,7 @@ describe("Duck Class", () => {
     expect(duck.scaleX).toBeLessThan(1 + CONFIG.squishFactor);
   });
 
-  it("should not move when falling", () => {
+  it("should fall when not static and not dragged", () => {
     const duck = new Duck(100, 200, false, 0);
     const mockState = {
       mode: "PLAYING" as const,
@@ -102,11 +102,11 @@ describe("Duck Class", () => {
     };
 
     const initialY = duck.y;
-    duck.isFalling = true;
     duck.update(mockState);
 
     // Y should increase due to gravity
     expect(duck.y).toBeGreaterThan(initialY);
+    expect(duck.velocity).toBe(CONFIG.gravity);
   });
 });
 

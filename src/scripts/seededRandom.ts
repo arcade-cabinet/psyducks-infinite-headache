@@ -106,12 +106,12 @@ export class SeededRandom {
   private generateRandomSeed(): string {
     const words = [];
     const mathRandom = Math.random;
-    
+
     // Use Math.random for initial seed generation only
     words.push(ADJECTIVES[Math.floor(mathRandom() * ADJECTIVES.length)]);
     words.push(ADJECTIVES[Math.floor(mathRandom() * ADJECTIVES.length)]);
     words.push(NOUNS[Math.floor(mathRandom() * NOUNS.length)]);
-    
+
     return words.join("-").toLowerCase();
   }
 
@@ -188,7 +188,7 @@ export class SeededRandom {
     const hue = this.nextInt(0, 360);
     const saturation = this.nextInt(60, 90);
     const lightness = this.nextInt(50, 70);
-    
+
     return {
       primary: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
       secondary: `hsl(${hue}, ${Math.max(20, saturation - 30)}%, ${Math.min(90, lightness + 20)}%)`,
@@ -244,7 +244,7 @@ export function parseSeed(seed: string): {
   noun?: string;
 } {
   const parts = seed.split("-");
-  
+
   if (parts.length === 3) {
     return {
       isValid: true,
@@ -253,7 +253,7 @@ export function parseSeed(seed: string): {
       noun: parts[2],
     };
   }
-  
+
   return { isValid: false };
 }
 

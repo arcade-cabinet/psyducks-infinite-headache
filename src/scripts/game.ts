@@ -41,13 +41,13 @@ export interface LevelConfig {
  */
 export function generateLevelConfigs(seededRandom: SeededRandom, count = 10): LevelConfig[] {
   const configs: LevelConfig[] = [];
-  
+
   for (let i = 0; i < count; i++) {
     const colors = seededRandom.generateColorPair();
     const baseInterval = 2000;
     // Gradually decrease spawn interval as levels progress (logarithmic curve for smooth difficulty)
     const intervalReduction = Math.log(i + 1) * 150;
-    
+
     configs.push({
       color: colors.primary,
       secondaryColor: colors.secondary,
@@ -56,7 +56,7 @@ export function generateLevelConfigs(seededRandom: SeededRandom, count = 10): Le
       wobbleMultiplier: 1.0 + i * 0.1,
     });
   }
-  
+
   return configs;
 }
 
@@ -138,7 +138,7 @@ export function drawPsyduck(
   ctx.stroke();
 
   // Arms (Holding Head)
-  const armShake = isHeadache ? Math.random() * 2 : 0;
+  const armShake = isHeadache ? Math.sin(Date.now() / 100) + 1 : 0;
   ctx.fillStyle = primaryColor;
 
   ctx.beginPath();
@@ -184,8 +184,8 @@ export function drawPsyduck(
 
   // Eyes
   ctx.fillStyle = "#FFF";
-  // Blink Logic
-  const blink = Math.random() > 0.99;
+  // Blink Logic (time-based)
+  const blink = Math.sin(Date.now() / 3000) > 0.98;
 
   if (blink && !isHeadache) {
     ctx.beginPath();
@@ -209,8 +209,8 @@ export function drawPsyduck(
     let pupilSize = Math.max(0.5, 1.5 - stress * 1.5);
     if (isHeadache) pupilSize = 0.5;
 
-    const shakeX = isHeadache ? (Math.random() - 0.5) * 3 : 0;
-    const shakeY = isHeadache ? (Math.random() - 0.5) * 3 : 0;
+    const shakeX = isHeadache ? Math.sin(Date.now() / 30) * 1.5 : 0;
+    const shakeY = isHeadache ? Math.cos(Date.now() / 40) * 1.5 : 0;
 
     ctx.fillStyle = "#000";
     ctx.beginPath();
@@ -221,7 +221,8 @@ export function drawPsyduck(
 
   // Psychic Waves
   if (isHeadache) {
-    ctx.strokeStyle = `rgba(239, 83, 80, ${0.5 + Math.random() * 0.5})`;
+    const waveIntensity = 0.5 + (Math.sin(Date.now() / 200) + 1) * 0.25;
+    ctx.strokeStyle = `rgba(239, 83, 80, ${waveIntensity})`;
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.arc(0, -h / 3, w, -Math.PI / 2 - 0.5, -Math.PI / 2 + 0.5);
@@ -283,7 +284,7 @@ export class Duck {
   scaleX: number;
   mergeLevel: number; // 0 = base size, 1 = first merge, etc.
   stackCount: number; // How many ducks in this stack
-  velocity: number;
+  velocity: number; // Fall speed
   isBeingDragged: boolean;
   spawnX: number; // Random spawn position
   primaryColor: string;
@@ -320,7 +321,7 @@ export class Duck {
     this.stackCount = 1;
   }
 
-  update(state: GameState) {
+  update(_state: GameState) {
     // SQUISH recovery
     this.scaleX += (1 - this.scaleX) * 0.15;
     this.scaleY += (1 - this.scaleY) * 0.15;
@@ -333,15 +334,9 @@ export class Duck {
       return;
     }
 
-    if (this.isFalling) {
-      this.y += this.velocity;
-      return;
-    }
-
-    // If not falling and not dragged, start falling
-    if (!this.isStatic && !this.isBeingDragged) {
-      this.isFalling = true;
-    }
+    // Start or continue falling
+    this.isFalling = true;
+    this.y += this.velocity;
   }
 
   draw(ctx: CanvasRenderingContext2D, score: number) {
@@ -351,7 +346,17 @@ export class Duck {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.scale(this.scaleX, this.scaleY);
-    drawPsyduck(ctx, 0, 0, this.w, this.h, stress, isHeadache, this.primaryColor, this.secondaryColor);
+    drawPsyduck(
+      ctx,
+      0,
+      0,
+      this.w,
+      this.h,
+      stress,
+      isHeadache,
+      this.primaryColor,
+      this.secondaryColor,
+    );
 
     // Draw merge level indicator if merged
     if (this.mergeLevel > 0) {

@@ -94,10 +94,14 @@ export class WobblePhysics {
    * Get wobble state for rendering
    */
   getState(): WobbleState {
+    const restoringForce = -this.angle * this.restoring * (1 - this.instability);
+    const massForce = this.centerOfMassOffset * 0.001 * this.instability;
+    const angularAcceleration = restoringForce + massForce;
+    
     return {
       angle: this.angle,
       angularVelocity: this.angularVelocity,
-      angularAcceleration: 0,
+      angularAcceleration,
       stability: 1 - this.instability,
     };
   }
@@ -132,6 +136,8 @@ export class WobblePhysics {
   }
 }
 
+const NORMALIZATION_FACTOR = 100;
+
 /**
  * Calculate stack imbalance
  */
@@ -144,7 +150,7 @@ export function calculateImbalance(ducks: { x: number }[]): number {
     totalOffset += offset;
   }
 
-  return totalOffset / (ducks.length - 1) / 100; // Normalize
+  return totalOffset / (ducks.length - 1) / NORMALIZATION_FACTOR;
 }
 
 /**

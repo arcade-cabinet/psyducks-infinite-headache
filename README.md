@@ -59,6 +59,7 @@ pnpm preview
 The project includes comprehensive testing:
 
 #### Unit Tests (Vitest)
+
 Tests for game logic, duck physics, particle system, and collision detection.
 
 ```bash
@@ -66,6 +67,7 @@ pnpm test:unit
 ```
 
 #### E2E Tests (Playwright)
+
 End-to-end tests covering:
 - Game initialization
 - User interactions (tap/click/keyboard)
@@ -90,7 +92,8 @@ pnpm check
 
 ## Project Structure
 
-```
+```text
+├── .github/
 ├── .github/
 │   └── workflows/          # CI/CD pipelines
 │       ├── ci.yml         # Continuous Integration
@@ -133,7 +136,7 @@ The project automatically deploys to GitHub Pages via GitHub Actions when change
 ### CD Pipeline
 - Builds production bundle
 - Deploys to GitHub Pages
-- Available at: https://arcade-cabinet.github.io/psyduck-stsck/
+- Available at: [https://arcade-cabinet.github.io/psyduck-stsck/](https://arcade-cabinet.github.io/psyduck-stsck/)
 
 ## PWA Features
 

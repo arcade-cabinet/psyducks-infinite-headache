@@ -4,6 +4,10 @@
   "version": "1.0.0",
   "description": "Psyduck's Infinite Headache Tower - A stacking game PWA built with Astro",
   "packageManager": "pnpm@10.2.0",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.2.0"
+  },
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",

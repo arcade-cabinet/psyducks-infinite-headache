@@ -85,7 +85,6 @@
     animateLevelUp,
     animatePerfectText,
     animateScoreUpdate,
-    createParticleBurst,
     criticalShake,
     fadeIn,
     fadeOut,
@@ -156,7 +155,6 @@
     targetCameraY: 0,
   };
 
-  let touchIdentifier: number | null = null;
   const wobblePhysics = new WobblePhysics();
 
   function getCurrentLevelConfig() {
@@ -204,6 +202,8 @@
     state.stressLevel = 0;
     state.mergeCount = 0;
     state.isDragging = false;
+    state.cameraY = 0;
+    state.targetCameraY = 0;
     wobblePhysics.reset();
 
     highScoreDisplay.textContent = state.highScore.toString();
@@ -295,7 +295,7 @@
     
     // Create merged duck at position of topmost removed duck
     const topDuck = state.ducks[state.ducks.length - 1];
-    const targetY = topDuck.y - CONFIG.duckHeight * 0.85;
+    const targetY = topDuck.y - topDuck.h * 0.85;
     const levelConfig = getCurrentLevelConfig();
     
     const mergedDuck = new Duck(
@@ -310,7 +310,9 @@
     state.ducks.push(mergedDuck);
     
     // Particles burst
-    createParticleBurst(state.particles, mergedDuck.x, mergedDuck.y, 40);
+    for (let i = 0; i < 40; i++) {
+      state.particles.push(new Particle(mergedDuck.x, mergedDuck.y));
+    }
     
     // Reset merge count
     state.mergeCount = 0;
@@ -351,12 +353,12 @@
 
     const topDuck = state.ducks[state.ducks.length - 1];
     // Hitbox top
-    const targetY = topDuck.y - CONFIG.duckHeight * 0.85;
+    const targetY = topDuck.y - topDuck.h * 0.85;
 
     if (falling.y >= targetY) {
       const diff = falling.x - topDuck.x;
       const absDiff = Math.abs(diff);
-      const maxDiff = CONFIG.duckWidth * CONFIG.hitTolerance;
+      const maxDiff = topDuck.w * CONFIG.hitTolerance;
 
       if (absDiff < maxDiff) {
         // LANDED
@@ -605,7 +607,7 @@
 
     // Platform
     ctx.fillStyle = "#FFC107";
-    ctx.fillRect(0, state.baseY + CONFIG.duckHeight / 2, state.width, 1000);
+    ctx.fillRect(0, state.baseY + CONFIG.duckBaseHeight / 2, state.width, 1000);
 
     // Ducks
     for (const duck of state.ducks) {
