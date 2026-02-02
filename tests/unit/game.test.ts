@@ -38,36 +38,13 @@ describe("Duck Class", () => {
 
   it("should recover from squish over time", () => {
     const duck = new Duck(100, 200, false, 0);
-    const mockState = {
-      mode: "PLAYING" as const,
-      score: 0,
-      highScore: 0,
-      level: 0,
-      seed: "test-seed",
-      ducks: [],
-      currentDuck: null,
-      cameraY: 0,
-      targetCameraY: 0,
-      bgRotation: 0,
-      width: 800,
-      height: 600,
-      baseY: 500,
-      particles: [],
-      gameSpeed: 1,
-      stressLevel: 0,
-      isDragging: false,
-      dragStartX: 0,
-      mergeCount: 0,
-      rng: new SeededRandom("test"),
-      levelConfigs: [],
-    };
 
     duck.squish();
     const initialScaleY = duck.scaleY;
 
     // Update multiple times
     for (let i = 0; i < 10; i++) {
-      duck.update(mockState);
+      duck.update();
     }
 
     // Should be closer to 1 after updates
@@ -77,32 +54,9 @@ describe("Duck Class", () => {
 
   it("should fall when not static and not dragged", () => {
     const duck = new Duck(100, 200, false, 0);
-    const mockState = {
-      mode: "PLAYING" as const,
-      score: 0,
-      highScore: 0,
-      level: 0,
-      seed: "test-seed",
-      ducks: [],
-      currentDuck: null,
-      cameraY: 0,
-      targetCameraY: 0,
-      bgRotation: 0,
-      width: 800,
-      height: 600,
-      baseY: 500,
-      particles: [],
-      gameSpeed: 1,
-      stressLevel: 0,
-      isDragging: false,
-      dragStartX: 0,
-      mergeCount: 0,
-      rng: new SeededRandom("test"),
-      levelConfigs: [],
-    };
 
     const initialY = duck.y;
-    duck.update(mockState);
+    duck.update();
 
     // Y should increase due to gravity
     expect(duck.y).toBeGreaterThan(initialY);
