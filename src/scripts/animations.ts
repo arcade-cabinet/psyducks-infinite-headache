@@ -184,13 +184,13 @@ export function createParticleBurst(container: HTMLElement, x: number, y: number
  * Animate duck merge - scale up with particle burst
  */
 export function animateMerge(element: HTMLElement, callback?: () => void) {
-  animate(element, {
+  const anim = animate(element, {
     scale: [1, 1.5, 1.3],
     rotate: [0, 360],
     duration: 800,
     ease: "outElastic(1, .6)",
-    onComplete: callback,
   });
+  if (callback) anim.then(callback);
 }
 
 /**

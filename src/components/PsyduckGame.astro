@@ -111,7 +111,7 @@
 
 <script>
   import type { GameState } from "@/scripts/game";
-  import { CONFIG, Duck, Particle, generateLevelConfigs } from "@/scripts/game";
+  import { CONFIG, Duck, Particle, computeMergeGrowthRate, generateLevelConfigs } from "@/scripts/game";
   import {
     animateGameOver,
     animateLevelUp,
@@ -207,6 +207,9 @@
   // Track the active game seed for retry
   let activeGameSeed = "";
 
+  // Auto-drop timer: drops hovering duck after a timeout (adds time pressure)
+  let autoDropTimer: ReturnType<typeof setTimeout> | null = null;
+
   function getCurrentLevelConfig() {
     return state.levelConfigs[Math.min(state.level, state.levelConfigs.length - 1)];
   }
@@ -251,6 +254,9 @@
   function initGame(continueFromLevel = false, retryWithSeed?: string) {
     resize();
     initAudio();
+
+    // Clear any pending auto-drop timer
+    if (autoDropTimer) { clearTimeout(autoDropTimer); autoDropTimer = null; }
 
     // Cancel any pending anime.js animations on scoreBox to prevent opacity conflicts
     cancelAnimations(scoreBox);
@@ -327,10 +333,13 @@
   }
 
   function spawnNewDuck() {
+    // Clear any existing auto-drop timer
+    if (autoDropTimer) { clearTimeout(autoDropTimer); autoDropTimer = null; }
+
     // Use seeded random for spawn position
     const spawnX = state.rng.nextFloat(CONFIG.duckBaseWidth, state.width - CONFIG.duckBaseWidth);
-    // Spawn above the camera so the duck is always visible at the top
-    const spawnY = state.cameraY - CONFIG.duckBaseHeight * 2;
+    // Spawn at the top of the visible area (duck hovers here until player drops it)
+    const spawnY = state.cameraY + CONFIG.duckBaseHeight * 1.5;
 
     const levelConfig = getCurrentLevelConfig();
 
@@ -342,6 +351,19 @@
       levelConfig.color,
       levelConfig.secondaryColor
     );
+
+    // Auto-drop timer: if player doesn't act, duck drops automatically (time pressure)
+    const autoDropMs = Math.max(
+      CONFIG.autoDropMinMs,
+      CONFIG.autoDropBaseMs - state.level * CONFIG.autoDropLevelReduction
+    );
+    autoDropTimer = setTimeout(() => {
+      if (state.currentDuck && !state.currentDuck.isFalling && !state.currentDuck.isStatic) {
+        state.currentDuck.isFalling = true;
+        playDrop();
+      }
+      autoDropTimer = null;
+    }, autoDropMs);
   }
 
   function triggerPerfect(x: number, y: number) {
@@ -380,10 +402,11 @@
     // Remove the last 5 stacked ducks
     state.ducks.splice(-CONFIG.mergeThreshold, CONFIG.mergeThreshold);
 
-    // Grow the base duck (index 0)
+    // Grow the base duck (index 0) using exponential growth scaled to screen width
     const baseDuck = state.ducks[0];
     baseDuck.mergeLevel++;
-    const sizeMultiplier = 1 + baseDuck.mergeLevel * CONFIG.mergeGrowthRate;
+    const growthRate = computeMergeGrowthRate(state.width, state.level);
+    const sizeMultiplier = Math.pow(1 + growthRate, baseDuck.mergeLevel);
     baseDuck.w = CONFIG.duckBaseWidth * sizeMultiplier;
     baseDuck.h = CONFIG.duckBaseHeight * sizeMultiplier;
 
@@ -402,7 +425,7 @@
   function checkLevelComplete() {
     // Level up when the base duck fills enough of the screen width
     const baseDuck = state.ducks[0];
-    if (baseDuck.w >= state.width * CONFIG.levelUpWidthRatio) {
+    if (baseDuck.w >= state.width * CONFIG.levelUpScreenRatio) {
       // Level up!
       state.mode = "LEVELUP";
       state.level++;
@@ -500,6 +523,7 @@
   }
 
   function gameOver() {
+    if (autoDropTimer) { clearTimeout(autoDropTimer); autoDropTimer = null; }
     state.mode = "GAMEOVER";
     playFail();
     triggerHaptic("heavy");
@@ -527,35 +551,38 @@
     animateGameOver(gameOverScreen);
   }
 
-  function inputHandler(e: MouseEvent | TouchEvent | KeyboardEvent) {
-    if (
-      e.type === "mousedown" ||
-      e.type === "touchstart" ||
-      (e instanceof KeyboardEvent && e.code === "Space")
-    ) {
-      // Prevent default only on canvas to allow UI interaction
-      if (e.target === canvas) e.preventDefault();
-
-      if (state.mode === "PLAYING" && state.currentDuck && !state.currentDuck.isFalling) {
-        state.currentDuck.isFalling = true;
-        playDrop();
-      }
+  /** Drop the current duck (Space / tap off-duck). */
+  function dropCurrentDuck() {
+    if (state.mode === "PLAYING" && state.currentDuck && !state.currentDuck.isFalling) {
+      state.currentDuck.isFalling = true;
+      if (autoDropTimer) { clearTimeout(autoDropTimer); autoDropTimer = null; }
+      playDrop();
     }
   }
 
-  function startDrag(clientX: number, clientY: number, identifier?: number) {
-    if (state.mode !== "PLAYING" || !state.currentDuck || state.currentDuck.isFalling) return;
+  /**
+   * Unified pointer-down handler for canvas.
+   * If the pointer is on the duck → start drag (position it).
+   * If the pointer is elsewhere → drop the duck.
+   */
+  function handlePointerDown(clientX: number, clientY: number, identifier?: number) {
+    if (state.mode !== "PLAYING" || !state.currentDuck) return;
 
-    const { x, y } = screenToDesign(clientX, clientY);
-    const worldY = y + state.cameraY;
+    if (!state.currentDuck.isFalling) {
+      const { x, y } = screenToDesign(clientX, clientY);
+      const worldY = y + state.cameraY;
 
-    // Check if touch is on current duck's tummy
-    if (state.currentDuck.containsPoint(x, worldY)) {
-      state.isDragging = true;
-      state.dragStartX = x - state.currentDuck.x;
-      state.currentDuck.isBeingDragged = true;
-      if (identifier !== undefined) {
-        touchIdentifier = identifier;
+      if (state.currentDuck.containsPoint(x, worldY)) {
+        // Start drag
+        state.isDragging = true;
+        state.dragStartX = x - state.currentDuck.x;
+        state.currentDuck.isBeingDragged = true;
+        if (identifier !== undefined) {
+          touchIdentifier = identifier;
+        }
+      } else {
+        // Tap elsewhere → drop
+        dropCurrentDuck();
       }
     }
   }
@@ -574,6 +601,7 @@
     if (state.isDragging && state.currentDuck) {
       state.currentDuck.isBeingDragged = false;
       state.currentDuck.isFalling = true;
+      if (autoDropTimer) { clearTimeout(autoDropTimer); autoDropTimer = null; }
       playDrop();
     }
     state.isDragging = false;
@@ -730,9 +758,12 @@
   // Inputs
   const ARROW_MOVE_PX = 15; // Design-space pixels per arrow key press
   window.addEventListener("keydown", (e) => {
-    if (e.code === "Space") inputHandler(e);
+    if (e.code === "Space") {
+      if (e.target === canvas || e.target === document.body) e.preventDefault();
+      dropCurrentDuck();
+    }
 
-    // Arrow key movement (works while duck is falling, like drag does)
+    // Arrow key movement while duck is hovering or falling (not static)
     if (state.mode === "PLAYING" && state.currentDuck && !state.currentDuck.isStatic) {
       const halfW = state.currentDuck.w / 2;
       if (e.code === "ArrowLeft") {
@@ -745,13 +776,10 @@
     }
   });
 
-  // Touch/Click on canvas
-  canvas.addEventListener("mousedown", inputHandler);
-  canvas.addEventListener("touchstart", inputHandler, { passive: false });
-
-  // Drag handlers - Mouse
+  // Mouse handler — unified drag-or-drop
   canvas.addEventListener("mousedown", (e) => {
-    startDrag(e.clientX, e.clientY);
+    e.preventDefault();
+    handlePointerDown(e.clientX, e.clientY);
   });
 
   canvas.addEventListener("mousemove", (e) => {
@@ -768,11 +796,12 @@
     endDrag();
   });
 
-  // Drag handlers - Touch
+  // Touch handler — unified drag-or-drop
   canvas.addEventListener("touchstart", (e) => {
+    e.preventDefault();
     if (e.touches.length > 0) {
       const touch = e.touches[0];
-      startDrag(touch.clientX, touch.clientY, touch.identifier);
+      handlePointerDown(touch.clientX, touch.clientY, touch.identifier);
     }
   }, { passive: false });
 

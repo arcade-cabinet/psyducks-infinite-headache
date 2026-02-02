@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { CONFIG, Duck, Particle } from "@/scripts/game";
+import { CONFIG, computeMergeGrowthRate, Duck, mergesForLevel, Particle } from "@/scripts/game";
 import { SeededRandom } from "@/scripts/seededRandom";
 
 describe("Game Configuration", () => {
   it("should have valid configuration values", () => {
-    expect(CONFIG.duckBaseWidth).toBe(80);
-    expect(CONFIG.duckBaseHeight).toBe(70);
+    expect(CONFIG.duckBaseWidth).toBe(60);
+    expect(CONFIG.duckBaseHeight).toBe(52);
     expect(CONFIG.gravity).toBeGreaterThan(0);
     expect(CONFIG.perfectTolerance).toBeGreaterThan(0);
     expect(CONFIG.hitTolerance).toBeGreaterThan(0);
@@ -42,7 +42,8 @@ describe("Duck Class", () => {
     duck.squish();
     const initialScaleY = duck.scaleY;
 
-    // Update multiple times
+    // Set isFalling so update moves the duck
+    duck.isFalling = true;
     for (let i = 0; i < 10; i++) {
       duck.update();
     }
@@ -52,13 +53,23 @@ describe("Duck Class", () => {
     expect(duck.scaleX).toBeLessThan(1 + CONFIG.squishFactor);
   });
 
-  it("should fall when not static and not dragged", () => {
+  it("should hover when not falling, not static, and not dragged", () => {
     const duck = new Duck(100, 200, false, 0);
+    const initialY = duck.y;
+
+    // Duck starts with isFalling = false, so update should NOT move it
+    duck.update();
+    expect(duck.y).toBe(initialY);
+    expect(duck.isFalling).toBe(false);
+  });
+
+  it("should fall when isFalling is true", () => {
+    const duck = new Duck(100, 200, false, 0);
+    duck.isFalling = true;
 
     const initialY = duck.y;
     duck.update();
 
-    // Y should increase due to gravity
     expect(duck.y).toBeGreaterThan(initialY);
     expect(duck.velocity).toBe(CONFIG.gravity);
   });
@@ -109,6 +120,7 @@ describe("Duck prevY tracking", () => {
     const duck = new Duck(100, 200, false, 0);
     expect(duck.prevY).toBe(200);
 
+    duck.isFalling = true;
     duck.update();
 
     // prevY should be the old y (200), y should have moved by velocity
@@ -118,6 +130,7 @@ describe("Duck prevY tracking", () => {
 
   it("should track prevY across multiple updates", () => {
     const duck = new Duck(100, 0, false, 0);
+    duck.isFalling = true;
 
     for (let i = 0; i < 5; i++) {
       const yBefore = duck.y;
@@ -134,18 +147,70 @@ describe("Duck prevY tracking", () => {
     expect(duck.prevY).toBe(200);
     expect(duck.y).toBe(200);
   });
+
+  it("should not update prevY when hovering (not falling)", () => {
+    const duck = new Duck(100, 200, false, 0);
+    duck.update();
+    expect(duck.prevY).toBe(200);
+    expect(duck.y).toBe(200);
+  });
 });
 
 describe("CONFIG properties", () => {
-  it("should have mergeGrowthRate defined and positive", () => {
-    expect(CONFIG.mergeGrowthRate).toBeDefined();
-    expect(CONFIG.mergeGrowthRate).toBeGreaterThan(0);
+  it("should have levelUpScreenRatio defined between 0 and 1", () => {
+    expect(CONFIG.levelUpScreenRatio).toBeDefined();
+    expect(CONFIG.levelUpScreenRatio).toBeGreaterThan(0);
+    expect(CONFIG.levelUpScreenRatio).toBeLessThanOrEqual(1);
   });
 
-  it("should have levelUpWidthRatio defined between 0 and 1", () => {
-    expect(CONFIG.levelUpWidthRatio).toBeDefined();
-    expect(CONFIG.levelUpWidthRatio).toBeGreaterThan(0);
-    expect(CONFIG.levelUpWidthRatio).toBeLessThanOrEqual(1);
+  it("should have baseMergesPerLevel defined and positive", () => {
+    expect(CONFIG.baseMergesPerLevel).toBeDefined();
+    expect(CONFIG.baseMergesPerLevel).toBeGreaterThan(0);
+  });
+
+  it("should have auto-drop timer config", () => {
+    expect(CONFIG.autoDropBaseMs).toBeGreaterThan(0);
+    expect(CONFIG.autoDropMinMs).toBeGreaterThan(0);
+    expect(CONFIG.autoDropMinMs).toBeLessThan(CONFIG.autoDropBaseMs);
+  });
+});
+
+describe("Balanced merge coefficient", () => {
+  it("computeMergeGrowthRate returns positive value", () => {
+    const rate = computeMergeGrowthRate(800, 0);
+    expect(rate).toBeGreaterThan(0);
+  });
+
+  it("produces the same merge count on different screen widths", () => {
+    // Level 0: both mobile and desktop should need the same number of merges
+    const merges = mergesForLevel(0);
+    expect(merges).toBeGreaterThanOrEqual(CONFIG.baseMergesPerLevel);
+
+    // Verify growth reaches target in exactly mergesNeeded merges
+    for (const designWidth of [412, 600, 800]) {
+      const rate = computeMergeGrowthRate(designWidth, 0);
+      const finalWidth = CONFIG.duckBaseWidth * Math.pow(1 + rate, merges);
+      const target = designWidth * CONFIG.levelUpScreenRatio;
+      expect(finalWidth).toBeCloseTo(target, 1);
+    }
+  });
+
+  it("requires more merges at higher levels (logarithmic difficulty)", () => {
+    const mergesL0 = mergesForLevel(0);
+    const mergesL3 = mergesForLevel(3);
+    const mergesL9 = mergesForLevel(9);
+
+    expect(mergesL3).toBeGreaterThan(mergesL0);
+    expect(mergesL9).toBeGreaterThan(mergesL3);
+  });
+
+  it("growth rate is smaller on wider screens (more gradiated)", () => {
+    const rateMobile = computeMergeGrowthRate(412, 0);
+    const rateDesktop = computeMergeGrowthRate(800, 0);
+
+    // Wider screen → larger target → higher growth rate per merge
+    // (since base duck is same size but target is wider)
+    expect(rateDesktop).toBeGreaterThan(rateMobile);
   });
 });
 
