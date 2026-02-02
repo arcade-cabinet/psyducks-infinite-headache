@@ -278,7 +278,7 @@
   }
 
   function checkMerge() {
-    // Check if last 5 ducks have same merge level (base duck has different logic)
+    // Check if last 5 ducks have same merge level (base duck is excluded from merging)
     if (state.ducks.length < CONFIG.mergeThreshold + 1) return; // +1 for base duck
     
     const lastFive = state.ducks.slice(-CONFIG.mergeThreshold);
@@ -503,7 +503,6 @@
 
   function drawBackground() {
     const levelConfig = getCurrentLevelConfig();
-    
     // Background color based on level
     ctx.fillStyle = levelConfig.color;
     ctx.fillRect(0, 0, state.width, state.height);

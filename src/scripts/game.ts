@@ -39,13 +39,14 @@ export interface LevelConfig {
 /**
  * Generate level configs from seed
  */
-export function generateLevelConfigs(seededRandom: any, count = 10): LevelConfig[] {
+export function generateLevelConfigs(seededRandom: SeededRandom, count = 10): LevelConfig[] {
   const configs: LevelConfig[] = [];
   
   for (let i = 0; i < count; i++) {
     const colors = seededRandom.generateColorPair();
     const baseInterval = 2000;
-    const intervalReduction = Math.log(i + 1) * 150; // Logarithmic difficulty
+    // Gradually decrease spawn interval as levels progress (logarithmic curve for smooth difficulty)
+    const intervalReduction = Math.log(i + 1) * 150;
     
     configs.push({
       color: colors.primary,
