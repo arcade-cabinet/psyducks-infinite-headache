@@ -729,7 +729,14 @@
       setTimeout(() => {
         copySeedBtn.textContent = originalText;
       }, 1000);
+    }).catch(() => {
+      // Fallback: show error state briefly
+      copySeedBtn.textContent = "✗";
+      setTimeout(() => {
+        copySeedBtn.textContent = "📋";
+      }, 1000);
     });
+  });
   });
 
   // Initialize view
