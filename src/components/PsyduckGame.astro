@@ -664,11 +664,11 @@
     if (state.mode === "PLAYING") {
       // Apply gyroscope tilt to current duck (works while falling, like drag does)
       const gyro = getGyroState();
-      if (gyro.active && state.currentDuck && !state.currentDuck.isStatic) {
+      if (gyro.active && state.currentDuck && !state.currentDuck.isStatic && Math.abs(gyro.tiltX) > 0.1) {
         const tiltSpeed = 4; // Design-space pixels per frame at full tilt
         const halfW = state.currentDuck.w / 2;
-        state.currentDuck.x += gyro.tiltX * tiltSpeed;
-        state.currentDuck.x = Math.max(halfW, Math.min(state.width - halfW, state.currentDuck.x));
+        const newX = state.currentDuck.x + gyro.tiltX * tiltSpeed;
+        state.currentDuck.x = Math.max(halfW, Math.min(state.width - halfW, newX));
       }
 
       if (state.currentDuck) state.currentDuck.update();
