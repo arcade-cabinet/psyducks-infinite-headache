@@ -332,9 +332,17 @@
     }
   }
 
+  // Centralized auto-drop timer management
+  function clearAutoDropTimer() {
+    if (autoDropTimer) {
+      clearTimeout(autoDropTimer);
+      autoDropTimer = null;
+    }
+  }
+
   function spawnNewDuck() {
     // Clear any existing auto-drop timer
-    if (autoDropTimer) { clearTimeout(autoDropTimer); autoDropTimer = null; }
+    clearAutoDropTimer();
 
     // Use seeded random for spawn position
     const spawnX = state.rng.nextFloat(CONFIG.duckBaseWidth, state.width - CONFIG.duckBaseWidth);
