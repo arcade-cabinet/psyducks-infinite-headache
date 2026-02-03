@@ -109,18 +109,25 @@ export async function initGyroscope(): Promise<boolean> {
     if (typeof dme.requestPermission === "function") {
       try {
         const perm = await dme.requestPermission();
-        if (perm !== "granted") return false;
-      } catch {
+        if (perm !== "granted") {
+          console.warn("DeviceMotion permission denied");
+          return false;
+        }
+      } catch (error) {
+        console.warn("DeviceMotion permission request failed:", error);
         return false;
       }
     }
 
     const handler = (e: DeviceMotionEvent) => {
       const x = e.accelerationIncludingGravity?.x ?? 0;
-      gyroState.tiltX = Math.max(-1, Math.min(1, x / 10));
-      gyroState.active = true;
+      // More robust normalization with bounds checking
+      if (typeof x === 'number' && isFinite(x)) {
+        gyroState.tiltX = Math.max(-1, Math.min(1, x / 10));
+        gyroState.active = true;
+      }
     };
-    window.addEventListener("devicemotion", handler);
+    window.addEventListener("devicemotion", handler, { passive: true });
     gyroCleanup = () => window.removeEventListener("devicemotion", handler);
     return true;
   }
