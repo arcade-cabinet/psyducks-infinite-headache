@@ -9,8 +9,9 @@ export type InputMethod = "touch" | "keyboard" | "both";
  */
 export function detectInputMethod(): InputMethod {
   const hasTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
-
-  const hasKeyboard = !hasTouch || window.innerWidth > 1024;
+  
+  // More accurate keyboard detection - check for actual keyboard presence
+  const hasKeyboard = !hasTouch || (window.innerWidth > 1024 && !('ontouchstart' in window));
 
   if (hasTouch && hasKeyboard) return "both";
   if (hasTouch) return "touch";
