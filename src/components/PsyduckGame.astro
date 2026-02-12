@@ -417,6 +417,7 @@
   function checkCollision() {
     const falling = state.currentDuck;
     if (!falling) return;
+    if (falling.isStatic) return; // Prevent multiple collision triggers
 
     const topDuck = state.ducks[state.ducks.length - 1];
     // Hitbox top
