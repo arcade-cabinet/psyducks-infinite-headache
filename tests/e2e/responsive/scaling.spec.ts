@@ -23,7 +23,7 @@ test.describe("Responsive Scaling Mechanics", () => {
     expect(scale).toBeLessThan(1); // Should scale down
   });
 
-  test("designWidth should equal viewport for 412-800px range", async ({ page }) => {
+  test("designWidth should be 412 (fixed) regardless of viewport", async ({ page }) => {
     const testWidth = 600;
     await page.setViewportSize({ width: testWidth, height: 800 });
     await page.reload();
@@ -35,8 +35,9 @@ test.describe("Responsive Scaling Mechanics", () => {
       return { designWidth: gs.width, scale: gs.scale };
     });
 
-    expect(designWidth).toBe(testWidth);
-    expect(scale).toBeCloseTo(1, 1); // Should be roughly 1:1 if not max width capped
+    // Game logic uses fixed design-space coordinates
+    expect(designWidth).toBe(412);
+    expect(scale).toBeCloseTo(testWidth / 412, 2);
   });
 
   test("designWidth should be capped at 800 for wide viewports", async ({ page }) => {
