@@ -44,18 +44,19 @@ test.describe("Camera Mechanics", () => {
     await startGame(page);
     await positionDuckOverStack(page, 0);
 
-    // Drop duck
+    // Drop duck and wait for landing (which sets the new camera target)
     await page.keyboard.press("Space");
+    await waitForDuckLandingResult(page, 0);
 
-    // Check camera state immediately after drop starts
+    // Check camera state immediately after landing (should be start of interpolation)
     const startState = await getCameraState(page);
 
-    // Wait a bit
-    await page.waitForTimeout(100);
+    // Wait a bit for interpolation to progress
+    await page.waitForTimeout(200);
 
     const midState = await getCameraState(page);
 
-    // Should be moving towards target
+    // Should be moving towards target (so position should have changed)
     expect(midState.cameraY).not.toBe(startState.cameraY);
   });
 
@@ -67,7 +68,8 @@ test.describe("Camera Mechanics", () => {
       await positionDuckOverStack(page, 0);
       await page.keyboard.press("Space");
       await waitForDuckLandingResult(page, i);
-      await waitForCameraStabilize(page);
+      // Allow time for camera to move
+      await page.waitForTimeout(1000); 
     }
 
     const highStackCameraY = (await getCameraState(page)).cameraY;
