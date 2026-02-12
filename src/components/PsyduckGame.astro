@@ -959,7 +959,9 @@
   }
 
   // Initialize gyroscope for mobile
-  initGyroscope();
+  initGyroscope().then(enabled => {
+    if (enabled) console.debug('Gyroscope initialized');
+  });
 
   // Signal that the game module has fully loaded
   document.body.dataset.gameReady = "true";
