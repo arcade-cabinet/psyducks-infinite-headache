@@ -910,11 +910,24 @@
   drawBackground(); // Draw once before loop starts
   loop(); // Start loop immediately so background animates
 
-  // Expose game state for E2E test assertions.
-  // This is a client-side game with no sensitive data — the state is already
-  // visible in the canvas and DOM. E2E tests run against the production build
-  // (astro preview), so gating behind DEV would break them.
-  (window as any).__gameState = state;
+  // Expose minimal game state for E2E test assertions only
+  // Only expose non-sensitive properties needed for testing
+  if (import.meta.env.DEV || import.meta.env.MODE === 'test') {
+    (window as any).__gameState = {
+      mode: () => state.mode,
+      score: () => state.score,
+      level: () => state.level,
+      currentDuck: () => state.currentDuck ? {
+        x: state.currentDuck.x,
+        y: state.currentDuck.y,
+        isFalling: state.currentDuck.isFalling,
+        isStatic: state.currentDuck.isStatic
+      } : null,
+      ducks: () => state.ducks.map(d => ({ x: d.x, y: d.y, w: d.w, h: d.h })),
+      width: () => state.width,
+      gameOffsetX: () => state.gameOffsetX
+    };
+  }
 
   // Update control hints based on detected input method
   const controlHintEl = document.querySelector("#help-screen .help-item:nth-child(2) div");
