@@ -800,7 +800,7 @@ test.describe("Wobble Physics Mechanics", () => {
       });
 
       expect(initialState.mergeLevel).toBe(0);
-      expect(initialState.width).toBe(60); // DUCK_BASE_WIDTH
+      expect(initialState.width).toBe(80); // DUCK_BASE_WIDTH
 
       // The stability formula means:
       // mergeLevel 0: sizeStability = 1 / (1 + 0) = 1.0

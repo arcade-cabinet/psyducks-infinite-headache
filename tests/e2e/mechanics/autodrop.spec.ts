@@ -56,7 +56,9 @@ test.describe("Auto-Drop Mechanics", () => {
     await startGame(page);
     await waitForNewDuckResult(page);
     const initialTime = await getAutoDropTimeRemaining(page);
-    expect(initialTime).toBe(CONFIG.autoDropBaseMs);
+    // Allow for some frame execution time (e.g. up to 500ms)
+    expect(initialTime).toBeLessThanOrEqual(CONFIG.autoDropBaseMs);
+    expect(initialTime).toBeGreaterThan(CONFIG.autoDropBaseMs - 500);
 
     // Force level to 5 and spawn new duck
     await page.evaluate(() => {
