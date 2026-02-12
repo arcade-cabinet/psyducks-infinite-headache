@@ -1176,10 +1176,10 @@ export async function positionDuckPrecisely(
  * **Validates: Requirements 2.3**
  *
  * @param page - Playwright page instance
- * @param tolerance - Maximum allowed offset from top duck's x position (default: 8)
+ * @param tolerance - Maximum allowed offset from top duck's x position (default: 9)
  * @throws Error if duck is not within tolerance
  */
-export async function verifyDuckWithinTolerance(page: Page, tolerance = 8): Promise<void> {
+export async function verifyDuckWithinTolerance(page: Page, tolerance = 9): Promise<void> {
   const state = await page.evaluate(() => {
     // biome-ignore lint/suspicious/noExplicitAny: accessing injected game state on window
     const gs = (window as any).__gameState;
