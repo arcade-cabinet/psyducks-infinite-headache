@@ -143,7 +143,7 @@ This implementation plan creates a comprehensive E2E test suite for Psyduck's In
 - [x] 8. Checkpoint - Verify input and state tests
   - Ensure all input and state tests pass, ask the user if questions arise.
 
-- [-] 9. Implement game mechanics tests
+- [ ] 9. Implement game mechanics tests
   - [x] 9.1 Create tests/e2e/mechanics/merge.spec.ts
     - Test merge triggers at mergeCount=5
     - Test 5 ducks removed from array
@@ -165,7 +165,7 @@ This implementation plan creates a comprehensive E2E test suite for Psyduck's In
     - **Property 24: Difficulty Scaling with Level**
     - **Validates: Requirements 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8**
   
-  - [-] 9.3 Create tests/e2e/mechanics/wobble.spec.ts
+  - [x] 9.3 Create tests/e2e/mechanics/wobble.spec.ts
     - Test wobble impulse on landing
     - Test imbalance increases instability
     - Test stability bar reflects state

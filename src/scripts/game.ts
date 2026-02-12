@@ -31,6 +31,8 @@ export interface GameState {
   scale: number;
   dpr: number;
   gameOffsetX: number;
+  autoDropTimer: number;
+  autoDropTimeMax: number;
 }
 
 export interface LevelConfig {

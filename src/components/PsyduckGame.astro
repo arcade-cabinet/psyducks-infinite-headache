@@ -197,6 +197,8 @@
     scale: 1,
     dpr: window.devicePixelRatio || 1,
     gameOffsetX: 0,
+    autoDropTimer: CONFIG.autoDropBaseMs,
+    autoDropTimeMax: CONFIG.autoDropBaseMs,
   };
 
   const wobblePhysics = new WobblePhysics();
@@ -274,6 +276,8 @@
     state.isDragging = false;
     state.cameraY = 0;
     state.targetCameraY = 0;
+    state.autoDropTimer = CONFIG.autoDropBaseMs;
+    state.autoDropTimeMax = CONFIG.autoDropBaseMs;
     wobblePhysics.reset();
 
     highScoreDisplay.textContent = state.highScore.toString();
@@ -323,6 +327,14 @@
       levelConfig.color,
       levelConfig.secondaryColor
     );
+
+    // Calculate auto-drop time based on level
+    const dropTime = Math.max(
+      CONFIG.autoDropMinMs,
+      CONFIG.autoDropBaseMs - state.level * 200
+    );
+    state.autoDropTimeMax = dropTime;
+    state.autoDropTimer = dropTime;
   }
 
   function triggerPerfect(x: number, y: number) {
@@ -636,6 +648,15 @@
       // Smooth Camera
       const diff = state.targetCameraY - state.cameraY;
       state.cameraY += diff * 0.05; // Smooth ease
+
+      // Auto-Drop Logic
+      if (state.currentDuck && !state.currentDuck.isFalling && !state.currentDuck.isStatic && !state.isDragging) {
+        state.autoDropTimer -= 16; // Approx 60fps frame time
+        if (state.autoDropTimer <= 0) {
+          state.currentDuck.isFalling = true;
+          playDrop();
+        }
+      }
     }
 
     // Particles

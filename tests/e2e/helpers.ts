@@ -522,6 +522,97 @@ export async function triggerLevelUp(page: Page, timeout = 15000): Promise<void>
 }
 
 // ---------------------------------------------------------------------------
+// Auto-Drop Helper Functions
+// ---------------------------------------------------------------------------
+
+/**
+ * Wait for the auto-drop timer to trigger (duck starts falling).
+ *
+ * **Validates: Requirements 5.1, 5.2**
+ *
+ * @param page - Playwright page instance
+ * @param timeout - Maximum time to wait in milliseconds (default: 5000)
+ */
+export async function waitForAutoDropTrigger(page: Page, timeout = 5000): Promise<void> {
+  await page.waitForFunction(
+    () => {
+      // biome-ignore lint/suspicious/noExplicitAny: accessing injected game state on window
+      const gs = (window as any).__gameState;
+      return gs.currentDuck && gs.currentDuck.isFalling;
+    },
+    null,
+    { timeout },
+  );
+}
+
+/**
+ * Get the remaining time on the auto-drop timer.
+ * Note: This requires the game loop to expose the timer, or we infer it.
+ * Since `autoDropTimer` isn't directly exposed in GameState interface yet,
+ * we might need to rely on observing behavior or accessing internal state if possible.
+ *
+ * For now, we'll assume we can access it via `gs.autoDropTimer` if implemented,
+ * or return null if not available.
+ *
+ * **Validates: Requirements 5.1**
+ *
+ * @param page - Playwright page instance
+ * @returns The remaining time in ms, or null if not accessible
+ */
+export async function getAutoDropTimeRemaining(page: Page): Promise<number | null> {
+  return page.evaluate(() => {
+    // biome-ignore lint/suspicious/noExplicitAny: accessing injected game state on window
+    const gs = (window as any).__gameState;
+    // Assuming autoDropTimer is stored in state or accessible scope
+    // If not directly exposed, this might need adjustment in game.ts
+    return (gs as any).autoDropTimer ?? null;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Camera Helper Functions
+// ---------------------------------------------------------------------------
+
+/**
+ * Get the current camera state (y position and target y).
+ *
+ * **Validates: Requirements 6.1, 6.2**
+ *
+ * @param page - Playwright page instance
+ * @returns Object containing cameraY and targetCameraY
+ */
+export async function getCameraState(page: Page): Promise<{ cameraY: number; targetCameraY: number }> {
+  return page.evaluate(() => {
+    // biome-ignore lint/suspicious/noExplicitAny: accessing injected game state on window
+    const gs = (window as any).__gameState;
+    return {
+      cameraY: gs.cameraY,
+      targetCameraY: gs.targetCameraY,
+    };
+  });
+}
+
+/**
+ * Wait for the camera to stabilize (cameraY reaches targetCameraY within tolerance).
+ *
+ * **Validates: Requirements 6.1, 6.2**
+ *
+ * @param page - Playwright page instance
+ * @param timeout - Maximum time to wait in milliseconds (default: 5000)
+ */
+export async function waitForCameraStabilize(page: Page, timeout = 5000): Promise<void> {
+  await page.waitForFunction(
+    () => {
+      // biome-ignore lint/suspicious/noExplicitAny: accessing injected game state on window
+      const gs = (window as any).__gameState;
+      return Math.abs(gs.cameraY - gs.targetCameraY) < 1;
+    },
+    null,
+    { timeout },
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Coordinate Conversion Helper Functions
 // ---------------------------------------------------------------------------
 
