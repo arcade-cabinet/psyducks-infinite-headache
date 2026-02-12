@@ -22,7 +22,7 @@ const SEED = "scaled-collision-test-001";
 
 // Game constants from CONFIG
 const HIT_TOLERANCE = 0.65; // Collision zone = topDuck.w * 0.65
-const DUCK_BASE_WIDTH = 60; // Base duck width in design space
+const DUCK_BASE_WIDTH = 80; // Base duck width in design space
 
 test.describe("Scaled Collision Zone Detection", () => {
   // These tests rely on keyboard input which is unavailable on mobile devices.
