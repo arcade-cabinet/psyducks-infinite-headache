@@ -456,6 +456,27 @@ export async function triggerMerge(page: Page, timeout = 15000): Promise<void> {
     // biome-ignore lint/suspicious/noExplicitAny: accessing injected game state on window
     const gs = (window as any).__gameState;
     gs.mergeCount = 4;
+    
+    // Ensure we have enough ducks in the stack for a merge (need mergeThreshold + 1)
+    // We need 6 ducks total (base + 5 stacked). If we have fewer, add dummy static ducks.
+    // The loop logic requires 5 ducks to remove, so we need at least 5 above base.
+    while (gs.ducks.length < 6) {
+      gs.ducks.push({
+        x: gs.width / 2,
+        y: gs.baseY,
+        w: 80,
+        h: 70,
+        isStatic: true,
+        isFalling: false,
+        scaleX: 1,
+        scaleY: 1,
+        mergeLevel: 0,
+        draw: () => {},
+        update: () => {},
+        containsPoint: () => false,
+        squish: () => {}
+      });
+    }
   });
 
   // Position duck over the stack center for a successful landing
@@ -504,11 +525,32 @@ export async function triggerLevelUp(page: Page, timeout = 15000): Promise<void>
   await page.evaluate(() => {
     // biome-ignore lint/suspicious/noExplicitAny: accessing injected game state on window
     const gs = (window as any).__gameState;
-    const levelUpWidth = gs.width * 0.8;
-    // Set base duck width to 95% of level up threshold
-    gs.ducks[0].w = levelUpWidth * 0.95;
+    const levelUpWidth = gs.width * 0.85; // Use 0.85 from CONFIG (hardcoded here to be safe)
+    
+    // Set base duck width to 90% of level up threshold
+    gs.ducks[0].w = levelUpWidth * 0.9;
+    
     // Set mergeCount so next landing triggers merge (which will push over threshold)
     gs.mergeCount = 4;
+
+    // Ensure enough ducks for merge
+    while (gs.ducks.length < 6) {
+      gs.ducks.push({
+        x: gs.width / 2,
+        y: gs.baseY,
+        w: 80,
+        h: 70,
+        isStatic: true,
+        isFalling: false,
+        scaleX: 1,
+        scaleY: 1,
+        mergeLevel: 0,
+        draw: () => {},
+        update: () => {},
+        containsPoint: () => false,
+        squish: () => {}
+      });
+    }
   });
 
   // Position duck over the stack center for a successful landing

@@ -34,6 +34,11 @@ test.describe("UI - Screens", () => {
   });
 
   test("level up screen display", async ({ page }) => {
+    // Clear storage to ensure clean state
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await waitForGameReady(page);
+    
     await startGame(page);
     await triggerLevelUp(page);
     
