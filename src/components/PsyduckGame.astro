@@ -462,7 +462,8 @@
     const targetY = topDuck.y - topDuck.h * 0.85;
 
     // Swept collision: only trigger when duck crosses targetY this frame
-    if (falling.prevY < targetY && falling.y >= targetY) {
+    // Swept collision: trigger when duck crosses targetY this frame or has already passed it
+    if ((falling.prevY < targetY && falling.y >= targetY) || (falling.prevY >= targetY && falling.y > targetY)) {
       const diff = falling.x - topDuck.x;
       const absDiff = Math.abs(diff);
       const maxDiff = topDuck.w * CONFIG.hitTolerance;
