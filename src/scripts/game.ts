@@ -424,7 +424,7 @@ export class Duck {
     const dy = py - this.y;
     // Check if point is in ellipse (tummy area)
     const rx = (this.w / 2) * this.scaleX;
-    const ry = (this.h / 4) * this.scaleY; // Tummy is middle section
+    const ry = (this.h / 2) * this.scaleY; // Increased hit area
     return (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1;
   }
 }

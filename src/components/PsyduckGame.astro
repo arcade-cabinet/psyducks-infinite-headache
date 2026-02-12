@@ -316,7 +316,7 @@
   function spawnNewDuck() {
     // Use seeded random for spawn position
     const spawnX = state.rng.nextFloat(CONFIG.duckBaseWidth, state.width - CONFIG.duckBaseWidth);
-    const spawnY = -CONFIG.duckBaseHeight;
+    const spawnY = 120; // Spawn visible on screen for interaction
 
     const levelConfig = getCurrentLevelConfig();
 
@@ -523,6 +523,26 @@
       if (e.target === canvas) e.preventDefault();
 
       if (state.mode === "PLAYING" && state.currentDuck && !state.currentDuck.isFalling) {
+        // If clicking/touching, check if we hit the duck (to allow dragging instead of drop)
+        if (e.type === "mousedown" || e.type === "touchstart") {
+          let cx, cy;
+          if (e instanceof MouseEvent) {
+            cx = e.clientX;
+            cy = e.clientY;
+          } else if (window.TouchEvent && e instanceof TouchEvent && e.touches.length > 0) {
+            cx = e.touches[0].clientX;
+            cy = e.touches[0].clientY;
+          }
+
+          if (cx !== undefined && cy !== undefined) {
+            const { x, y } = screenToDesign(cx, cy);
+            const worldY = y + state.cameraY;
+            if (state.currentDuck.containsPoint(x, worldY)) {
+              return; // Hit duck -> Drag, don't drop
+            }
+          }
+        }
+
         state.currentDuck.isFalling = true;
         playDrop();
       }
