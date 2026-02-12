@@ -473,7 +473,7 @@
         const levelConfig = getCurrentLevelConfig();
         const spawnDelay = levelConfig.spawnInterval;
         
-        setTimeout(() => {
+        window.setTimeout(() => {
           if (state.mode === "PLAYING") {
             spawnNewDuck();
           }
