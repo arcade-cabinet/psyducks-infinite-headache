@@ -316,7 +316,7 @@
   function spawnNewDuck() {
     // Use seeded random for spawn position
     const spawnX = state.rng.nextFloat(CONFIG.duckBaseWidth, state.width - CONFIG.duckBaseWidth);
-    const spawnY = -CONFIG.duckBaseHeight;
+    const spawnY = 120; // Spawn visible on screen for interaction
 
     const levelConfig = getCurrentLevelConfig();
 

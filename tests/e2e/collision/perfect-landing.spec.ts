@@ -138,7 +138,8 @@ test.describe("Perfect Landing Detection", () => {
       // Using offset of 15px which is greater than perfectTolerance (8px)
       // but within hitTolerance (60 * 0.65 = 39px)
       const outsideOffset = 15;
-      await positionDuckOverStack(page, outsideOffset);
+      // Use precise positioning to ensure we don't accidentally land on a quantized step
+      await positionDuckPrecisely(page, 0, outsideOffset);
 
       // Verify duck is outside perfect tolerance before drop
       const preDuckX: number = await getGameState(page, "currentDuck.x");
