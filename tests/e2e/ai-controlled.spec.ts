@@ -1,10 +1,14 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 import * as YUKA from "yuka";
-
-async function waitForGameReady(page: Page) {
-  await page.waitForFunction(() => document.body.dataset.gameReady === "true", { timeout: 15000 });
-}
+import {
+  expectCanvasRendering,
+  getGameState,
+  startGame,
+  waitForDuckLandingResult,
+  waitForGameReady,
+  waitForNewDuckResult,
+} from "./helpers";
 
 /**
  * AI-Controlled Gameplay Test using Yuka
@@ -77,14 +81,16 @@ class AIPlayer {
 /**
  * Helper function to perform a single AI duck drop attempt
  * Returns true if the drop was successful (score increased)
+ *
+ * Uses waitForDuckLandingResult for robust wait handling (Requirements 1.1, 1.2, 1.3, 1.4, 1.5)
  */
 async function performAIDuckDrop(
   page: Page,
   ai: AIPlayer,
   box: { x: number; y: number; width: number; height: number },
 ): Promise<boolean> {
-  // Get current score
-  const scoreBefore = await page.locator("#scoreDisplay").textContent();
+  // Get current score from game state (more reliable than DOM)
+  const scoreBefore: number = await getGameState(page, "score");
 
   // AI observes the game state (simplified - in real scenario would use computer vision)
   const duckStartX = box.x + box.width * 0.5; // Assume duck starts at center
@@ -112,34 +118,41 @@ async function performAIDuckDrop(
     await page.mouse.up();
   }
 
-  // Wait for duck to land or miss (duck falls under gravity, needs time)
-  const scoreBefore_int = scoreBefore ? Number.parseInt(scoreBefore, 10) : 0;
-  try {
-    await page.waitForFunction(
-      (prevScore) => {
-        const score = document.getElementById("scoreDisplay")?.textContent;
-        const gameOver = document.getElementById("game-over-screen");
-        const currentScore = score ? parseInt(score, 10) : 0;
-        return currentScore > prevScore || (gameOver && !gameOver.classList.contains("hidden"));
-      },
-      scoreBefore_int,
-      { timeout: 8000 },
-    );
-  } catch {
-    // Timeout waiting for duck to land - return false
-    return false;
+  // Wait for duck to land using robust helper (handles all outcomes)
+  const result = await waitForDuckLandingResult(page, scoreBefore, 8000);
+
+  // Diagnostic output for stuck duck states (Requirement 1.5)
+  if (result.outcome === "stuck") {
+    console.log(`[AI DIAGNOSTIC] Duck stuck detected:`, {
+      outcome: result.outcome,
+      score: result.score,
+      mode: result.mode,
+      duckState: result.duckState,
+      previousScore: scoreBefore,
+    });
   }
 
-  // Check if score increased
-  const scoreAfter = await page.locator("#scoreDisplay").textContent();
-  return (
-    scoreAfter !== null &&
-    scoreBefore !== null &&
-    Number.parseInt(scoreAfter, 10) > Number.parseInt(scoreBefore, 10)
-  );
+  // Diagnostic output for timeout (helps debug hanging tests)
+  if (result.outcome === "timeout") {
+    console.log(`[AI DIAGNOSTIC] Landing timeout:`, {
+      outcome: result.outcome,
+      score: result.score,
+      mode: result.mode,
+      duckState: result.duckState,
+      previousScore: scoreBefore,
+    });
+  }
+
+  // Return true only if duck successfully landed (score increased)
+  return result.outcome === "landed";
 }
 
 test.describe("AI-Controlled Gameplay Tests", () => {
+  // Set 30s timeout for all AI tests (per Requirement 1.1)
+  test.beforeEach(async () => {
+    test.setTimeout(30_000);
+  });
+
   test("AI should successfully play several rounds", async ({ page }) => {
     const ai = new AIPlayer();
 
@@ -178,18 +191,30 @@ test.describe("AI-Controlled Gameplay Tests", () => {
           break;
         }
 
-        // Wait for next duck to spawn
-        await page.waitForTimeout(2500);
+        // Wait for next duck to spawn using robust helper
+        const newDuckResult = await waitForNewDuckResult(page, 5000);
+        if (!newDuckResult.success) {
+          if (newDuckResult.reason === "gameover") {
+            gameEnded = true;
+            break;
+          }
+          // For levelup or timeout, continue to next attempt
+        }
       } catch (error) {
         console.log(`AI attempt ${attempt + 1} encountered issue:`, error);
       }
     }
 
-    // Take screenshot of final result
-    await page.screenshot({
-      path: "test-results/screenshots/ai-gameplay-result.png",
-      fullPage: false,
-    });
+    // Take screenshot of final result (non-blocking)
+    try {
+      await page.screenshot({
+        path: "test-results/screenshots/ai-gameplay-result.png",
+        fullPage: false,
+        timeout: 5000,
+      });
+    } catch {
+      // Screenshot is optional - don't fail test if it times out
+    }
 
     // AI should have interacted with the game (score changed or game ended)
     console.log(`AI achieved ${successfulDrops} successful drops out of ${maxAttempts} attempts`);
@@ -215,14 +240,22 @@ test.describe("AI-Controlled Gameplay Tests", () => {
     // AI starts game
     await page.click("#startBtn");
     await expect(page.locator("#start-screen")).toBeHidden();
-    await page.waitForTimeout(1500);
+
+    // Wait for game to be ready with a new duck
+    await waitForNewDuckResult(page, 5000);
 
     // Verify game started
     await expect(page.locator("#scoreDisplay")).toBeVisible();
 
-    await page.screenshot({
-      path: "test-results/screenshots/ai-started-game.png",
-    });
+    // Take screenshot (non-blocking)
+    try {
+      await page.screenshot({
+        path: "test-results/screenshots/ai-started-game.png",
+        timeout: 5000,
+      });
+    } catch {
+      // Screenshot is optional - don't fail test if it times out
+    }
 
     ai.update(1.5);
   });
@@ -233,7 +266,9 @@ test.describe("AI-Controlled Gameplay Tests", () => {
     await waitForGameReady(page);
     await page.click("#startBtn");
     await expect(page.locator("#start-screen")).toBeHidden();
-    await page.waitForTimeout(1500);
+
+    // Wait for game to be ready with a new duck
+    await waitForNewDuckResult(page, 5000);
 
     // Monitor stability bar
     const stabilityBar = page.locator("#stabilityBar");
@@ -249,8 +284,176 @@ test.describe("AI-Controlled Gameplay Tests", () => {
     // AI would adjust strategy based on stability
     expect(stabilityWidth).toBeTruthy();
 
-    await page.screenshot({
-      path: "test-results/screenshots/ai-stability-monitoring.png",
-    });
+    // Take screenshot (non-blocking)
+    try {
+      await page.screenshot({
+        path: "test-results/screenshots/ai-stability-monitoring.png",
+        timeout: 5000,
+      });
+    } catch {
+      // Screenshot is optional - don't fail test if it times out
+    }
+  });
+
+  test("AI retry: play -> game over -> RETRY -> no start screen, no black screen", async ({
+    page,
+  }) => {
+    await page.goto("");
+    await page.fill("#seedInput", "ai-retry-test");
+    await startGame(page);
+
+    const gameOverScreen = page.locator("#game-over-screen");
+
+    // Keep clicking far left to trigger miss -> game over
+    for (let i = 0; i < 10; i++) {
+      await page.locator("#gameCanvas").click({ position: { x: 10, y: 300 } });
+      try {
+        await expect(gameOverScreen).toBeVisible({ timeout: 3000 });
+        break;
+      } catch {
+        // Continue trying
+      }
+    }
+
+    // Must reach game over for test to be valid
+    await expect(gameOverScreen).toBeVisible({ timeout: 5000 });
+
+    // Click RETRY
+    await page.locator("#restartBtn").click();
+
+    // Start screen should NOT appear
+    await expect(page.locator("#start-screen")).toBeHidden();
+    await expect(gameOverScreen).toBeHidden();
+
+    // ScoreBox should be visible (no black screen)
+    await expect(page.locator("#scoreBox")).toBeVisible();
+
+    // Score should be reset to 0
+    await expect(page.locator("#scoreDisplay")).toContainText("0");
+
+    // Canvas should be rendering (not all-black)
+    await expectCanvasRendering(page);
+
+    // Game mode should be PLAYING
+    const mode = await getGameState(page, "mode");
+    expect(mode).toBe("PLAYING");
+  });
+
+  test("AI collision reliability: drop ducks and verify game interaction", async ({ page }) => {
+    const ai = new AIPlayer();
+
+    await page.goto("");
+    await page.fill("#seedInput", "collision-reliability-test");
+    await startGame(page);
+
+    const canvas = page.locator("#gameCanvas");
+    const box = await canvas.boundingBox();
+    if (!box) throw new Error("Canvas not found");
+
+    let successfulDrops = 0;
+    let gameEnded = false;
+    const maxAttempts = 8;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const gameOverVisible = await page.locator("#game-over-screen").isVisible();
+      if (gameOverVisible) {
+        gameEnded = true;
+        break;
+      }
+
+      const success = await performAIDuckDrop(page, ai, box);
+      if (success) successfulDrops++;
+
+      ai.update(2.0);
+
+      // Wait for next duck to spawn using robust helper
+      const newDuckResult = await waitForNewDuckResult(page, 5000);
+      if (!newDuckResult.success && newDuckResult.reason === "gameover") {
+        gameEnded = true;
+        break;
+      }
+    }
+
+    // AI should have interacted with the game (score changed or game ended)
+    expect(successfulDrops > 0 || gameEnded).toBeTruthy();
+  });
+
+  test("AI keyboard: ArrowLeft/Right + Space positioning and dropping", async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name.startsWith("mobile"), "Keyboard input not available on mobile");
+
+    await page.goto("");
+    await page.fill("#seedInput", "keyboard-ai-test");
+    await startGame(page);
+    await page.waitForTimeout(200);
+
+    // Get initial duck X from game state
+    const initialX = await getGameState(page, "currentDuck.x");
+    expect(initialX).toBeDefined();
+    expect(typeof initialX).toBe("number");
+
+    // AI uses arrow keys to position duck
+    for (let i = 0; i < 5; i++) {
+      await page.keyboard.press("ArrowRight");
+      await page.waitForTimeout(50);
+    }
+
+    const movedX = await getGameState(page, "currentDuck.x");
+    // Duck may be clamped at right boundary, so check >=
+    expect(movedX).toBeGreaterThanOrEqual(initialX);
+
+    // Now move left more times to ensure net leftward movement
+    for (let i = 0; i < 10; i++) {
+      await page.keyboard.press("ArrowLeft");
+      await page.waitForTimeout(50);
+    }
+
+    const leftX = await getGameState(page, "currentDuck.x");
+    expect(leftX).toBeLessThan(movedX);
+
+    // Get score before drop
+    const scoreBefore: number = await getGameState(page, "score");
+
+    // Drop with Space
+    await page.keyboard.press("Space");
+
+    // Wait for result using robust helper
+    const result = await waitForDuckLandingResult(page, scoreBefore, 10000);
+
+    // Diagnostic output for stuck duck states (Requirement 1.5)
+    if (result.outcome === "stuck") {
+      console.log(`[AI KEYBOARD DIAGNOSTIC] Duck stuck detected:`, {
+        outcome: result.outcome,
+        score: result.score,
+        mode: result.mode,
+        duckState: result.duckState,
+        previousScore: scoreBefore,
+      });
+    }
+
+    // Diagnostic output for timeout
+    if (result.outcome === "timeout") {
+      console.log(`[AI KEYBOARD DIAGNOSTIC] Landing timeout:`, {
+        outcome: result.outcome,
+        score: result.score,
+        mode: result.mode,
+        duckState: result.duckState,
+        previousScore: scoreBefore,
+      });
+    }
+
+    // Verify game interaction occurred (landed or game over)
+    expect(result.outcome === "landed" || result.outcome === "gameover").toBeTruthy();
+
+    // Take screenshot (non-blocking)
+    try {
+      await page.screenshot({
+        path: "test-results/screenshots/ai-keyboard-test.png",
+        timeout: 5000,
+      });
+    } catch {
+      // Screenshot is optional - don't fail test if it times out
+    }
   });
 });

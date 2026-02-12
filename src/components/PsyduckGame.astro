@@ -381,7 +381,7 @@
   function checkLevelComplete() {
     // Level up when the base duck fills enough of the screen width
     const baseDuck = state.ducks[0];
-    if (baseDuck.w >= DESIGN_WIDTH * CONFIG.levelUpWidthRatio) {
+    if (baseDuck.w >= DESIGN_WIDTH * CONFIG.levelUpScreenRatio) {
       // Level up!
       state.mode = "LEVELUP";
       state.level++;
@@ -816,6 +816,70 @@
   ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
   drawBackground(); // Draw once before loop starts
   loop(); // Start loop immediately so background animates
+
+  // Helper functions for input detection and controls
+  function detectInputMethod() {
+    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const isMouse = window.matchMedia('(pointer: fine)').matches;
+    if (isMouse && !isTouch) return 'keyboard'; // Assume desktop = keyboard
+    if (isTouch && isMouse) return 'both';
+    return 'touch';
+  }
+
+  function getControlHint() {
+    const method = detectInputMethod();
+    if (method === 'keyboard') return 'Press Space to drop';
+    if (method === 'touch') return 'Tap to drop';
+    return 'Tap or Press Space to drop';
+  }
+
+  function initGyroscope() {
+    // Gyroscope initialization would go here.
+    // Note: iOS requires user interaction to request permission.
+    if (window.DeviceOrientationEvent) {
+      // Placeholder: Setup listener if needed in future
+    }
+  }
+
+  // Expose game state for E2E test assertions.
+  // This is a client-side game with no sensitive data — the state is already
+  // visible in the canvas and DOM. E2E tests run against the production build
+  // (astro preview), so gating behind DEV would break them.
+  (window as any).__gameState = state;
+  // Expose wobblePhysics for E2E test assertions
+  (window as any).__gameState.wobblePhysics = wobblePhysics;
+
+  // Update control hints based on detected input method
+  const controlHintEl = document.querySelector("#help-screen .help-item:nth-child(2) div");
+  if (controlHintEl) {
+    controlHintEl.innerHTML = `<strong>CONTROLS</strong><br />${getControlHint()}`;
+  }
+
+  // Update start screen control hint
+  const startHintEl = document.querySelector("#start-screen p");
+  if (startHintEl) {
+    const method = detectInputMethod();
+    if (method === "keyboard") {
+      startHintEl.innerHTML = `
+        Use arrow keys to position!<br />
+        Press Space to drop.<br />
+        Stack 5 to merge into a bigger duck.<br />
+        Keep the tower balanced!<br />
+        Fill the screen to level up!
+      `;
+    } else if (method === "both") {
+      startHintEl.innerHTML = `
+        Drag or use arrow keys to position!<br />
+        Tap or press Space to drop.<br />
+        Stack 5 to merge into a bigger duck.<br />
+        Keep the tower balanced!<br />
+        Fill the screen to level up!
+      `;
+    }
+  }
+
+  // Initialize gyroscope for mobile
+  initGyroscope();
 
   // Signal that the game module has fully loaded
   document.body.dataset.gameReady = "true";
