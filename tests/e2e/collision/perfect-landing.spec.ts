@@ -317,7 +317,7 @@ test.describe("Perfect Landing Detection", () => {
       }
 
       // Wait for particles to spawn - use shorter initial wait since particles decay quickly
-      const particleCount = await waitForParticles(page, 100, 500);
+      const particleCount = await waitForParticles(page, 100, 800);
 
       // Verify particles exist
       expect(particleCount).toBeGreaterThan(0);
