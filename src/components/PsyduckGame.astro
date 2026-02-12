@@ -141,6 +141,7 @@
   // Responsive scaling constants
   const DESIGN_WIDTH = 412;
   const MAX_GAME_WIDTH = 600;
+  const ARROW_MOVE_PX = 15;
 
   const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
   const ctx = canvas.getContext("2d", { alpha: false }) as CanvasRenderingContext2D;
@@ -714,7 +715,17 @@
 
   // Inputs
   window.addEventListener("keydown", (e) => {
-    if (e.code === "Space") inputHandler(e);
+    if (e.code === "Space") {
+      inputHandler(e);
+    } else if (state.mode === "PLAYING" && state.currentDuck && !state.currentDuck.isStatic) {
+      // Arrow key movement
+      const halfWidth = state.currentDuck.w / 2;
+      if (e.code === "ArrowLeft") {
+        state.currentDuck.x = Math.max(halfWidth, state.currentDuck.x - ARROW_MOVE_PX);
+      } else if (e.code === "ArrowRight") {
+        state.currentDuck.x = Math.min(state.width - halfWidth, state.currentDuck.x + ARROW_MOVE_PX);
+      }
+    }
   });
 
   // Touch/Click on canvas
