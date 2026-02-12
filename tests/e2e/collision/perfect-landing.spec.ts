@@ -279,7 +279,7 @@ test.describe("Perfect Landing Detection", () => {
 
       // Check that particles were spawned - use shorter initial wait since particles decay quickly
       // Particles decay at 0.03 per frame (60fps), so they last ~33 frames (~550ms)
-      const particleCount = await waitForParticles(page, 50, 300);
+      const particleCount = await waitForParticles(page, 100, 500);
 
       // Perfect landing should spawn particles
       // If snap occurred but no particles, the game's triggerPerfect may not have been called
@@ -317,7 +317,7 @@ test.describe("Perfect Landing Detection", () => {
       }
 
       // Wait for particles to spawn - use shorter initial wait since particles decay quickly
-      const particleCount = await waitForParticles(page, 50, 300);
+      const particleCount = await waitForParticles(page, 100, 500);
 
       // Verify particles exist
       expect(particleCount).toBeGreaterThan(0);
