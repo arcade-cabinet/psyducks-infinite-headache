@@ -28,7 +28,7 @@
     </p>
 
     <div class="seed-container">
-      <label for="seedInput" class="seed-label">Game Seed:</label>
+      <label for="seedInput" class="seed-label">Game Seed (optional):</label>
       <div class="seed-input-group">
         <input
           type="text"
@@ -42,7 +42,7 @@
         </button>
       </div>
       <p class="seed-hint">
-        Shuffle for a new seed, or type your own
+        Leave empty for random, or enter seed for deterministic gameplay
       </p>
     </div>
 
@@ -117,7 +117,6 @@
     animateLevelUp,
     animatePerfectText,
     animateScoreUpdate,
-    cancelAnimations,
     criticalShake,
     fadeIn,
     fadeOut,
@@ -138,12 +137,10 @@
     restoreWobbleTransform,
   } from "@/scripts/wobble";
   import { SeededRandom, sanitizeSeed } from "@/scripts/seededRandom";
-  import { detectInputMethod, getControlHint, getGyroState, initGyroscope, triggerHaptic } from "@/scripts/device";
 
-  // Responsive scaling: design width grows with viewport so wider screens
-  // show more game area instead of a zoomed-in view.
-  const MIN_DESIGN_WIDTH = 412; // mobile baseline
-  const MAX_DESIGN_WIDTH = 800; // cap for large monitors
+  // Responsive scaling constants
+  const DESIGN_WIDTH = 412;
+  const MAX_GAME_WIDTH = 600;
 
   const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
   const ctx = canvas.getContext("2d", { alpha: false }) as CanvasRenderingContext2D;
@@ -204,9 +201,6 @@
 
   const wobblePhysics = new WobblePhysics();
 
-  // Track the active game seed for retry
-  let activeGameSeed = "";
-
   function getCurrentLevelConfig() {
     return state.levelConfigs[Math.min(state.level, state.levelConfigs.length - 1)];
   }
@@ -222,18 +216,18 @@
     canvas.width = vw * dpr;
     canvas.height = vh * dpr;
 
-    // Responsive design width: wider screens get more game area, not more zoom
-    const designWidth = Math.max(MIN_DESIGN_WIDTH, Math.min(vw, MAX_DESIGN_WIDTH));
-    const scale = vw / designWidth;
+    // Compute game area scaling
+    const effectiveWidth = Math.min(vw, MAX_GAME_WIDTH);
+    const scale = effectiveWidth / DESIGN_WIDTH;
 
     state.viewportWidth = vw;
     state.viewportHeight = vh;
     state.scale = scale;
     state.dpr = dpr;
-    state.gameOffsetX = 0;
+    state.gameOffsetX = (vw - effectiveWidth) / 2;
 
-    // Game logic uses responsive design-space coordinates
-    state.width = designWidth;
+    // Game logic uses fixed design-space coordinates
+    state.width = DESIGN_WIDTH;
     state.height = vh / scale;
     state.baseY = state.height - 100;
   }
@@ -248,43 +242,31 @@
     };
   }
 
-  function initGame(continueFromLevel = false, retryWithSeed?: string) {
+  function initGame(continueFromLevel = false) {
     resize();
     initAudio();
-
-    // Cancel any pending anime.js animations on scoreBox to prevent opacity conflicts
-    cancelAnimations(scoreBox);
-    scoreBox.style.opacity = "1";
-    ctx.globalAlpha = 1;
-
+    
     // Get seed from input or use existing
     if (!continueFromLevel) {
       state.score = 0;
       state.level = 0;
-
-      if (retryWithSeed) {
-        // Retry: reuse the same seed
-        state.seed = retryWithSeed;
+      
+      // Get seed from input
+      const inputSeed = seedInput?.value?.trim();
+      if (inputSeed) {
+        state.seed = sanitizeSeed(inputSeed);
       } else {
-        // Fresh game: get seed from input
-        const inputSeed = seedInput?.value?.trim();
-        if (inputSeed) {
-          state.seed = sanitizeSeed(inputSeed);
-        } else {
-          state.seed = new SeededRandom().seed;
-        }
+        // Generate random seed
+        state.seed = new SeededRandom().seed;
       }
-
+      
       // Create new RNG with seed
       state.rng = new SeededRandom(state.seed);
-
-      // Store seed for retry
-      activeGameSeed = state.seed;
-
+      
       // Generate level configs from seed
       state.levelConfigs = generateLevelConfigs(state.rng, 20);
     }
-
+    
     state.ducks = [];
     state.particles = [];
     state.stressLevel = 0;
@@ -329,8 +311,7 @@
   function spawnNewDuck() {
     // Use seeded random for spawn position
     const spawnX = state.rng.nextFloat(CONFIG.duckBaseWidth, state.width - CONFIG.duckBaseWidth);
-    // Spawn above the camera so the duck is always visible at the top
-    const spawnY = state.cameraY - CONFIG.duckBaseHeight * 2;
+    const spawnY = -CONFIG.duckBaseHeight;
 
     const levelConfig = getCurrentLevelConfig();
 
@@ -346,7 +327,6 @@
 
   function triggerPerfect(x: number, y: number) {
     playPerfect();
-    triggerHaptic("medium");
 
     // UI Text
     const el = document.createElement("div");
@@ -375,7 +355,6 @@
 
     // MERGE!
     playMerge();
-    triggerHaptic("heavy");
 
     // Remove the last 5 stacked ducks
     state.ducks.splice(-CONFIG.mergeThreshold, CONFIG.mergeThreshold);
@@ -402,7 +381,7 @@
   function checkLevelComplete() {
     // Level up when the base duck fills enough of the screen width
     const baseDuck = state.ducks[0];
-    if (baseDuck.w >= state.width * CONFIG.levelUpWidthRatio) {
+    if (baseDuck.w >= DESIGN_WIDTH * CONFIG.levelUpScreenRatio) {
       // Level up!
       state.mode = "LEVELUP";
       state.level++;
@@ -430,8 +409,7 @@
     // Hitbox top
     const targetY = topDuck.y - topDuck.h * 0.85;
 
-    // Swept collision: only trigger when duck crosses targetY this frame
-    if (falling.prevY < targetY && falling.y >= targetY) {
+    if (falling.y >= targetY) {
       const diff = falling.x - topDuck.x;
       const absDiff = Math.abs(diff);
       const maxDiff = topDuck.w * CONFIG.hitTolerance;
@@ -449,17 +427,16 @@
         falling.isStatic = true;
         falling.isFalling = false;
         falling.squish();
-        if (topDuck) topDuck.squish();
+        if (topDuck) topDuck.squish(); // Chain reaction squish? Just top one for now.
 
         state.ducks.push(falling);
         state.score++;
         scoreDisplay.textContent = state.score.toString();
-
+        
         // Animate score update
         animateScoreUpdate(scoreDisplay);
-
+        
         playLand();
-        triggerHaptic("light");
 
         // Add wobble impulse on land using seeded RNG
         const imbalance = calculateImbalance(state.ducks);
@@ -488,21 +465,17 @@
           }
         }, spawnDelay);
       } else {
-        // MISS -> duck passed through, game over
-        gameOver();
+        // MISS -> Check if off screen
+        if (falling.y > state.height + state.cameraY + 200) {
+          gameOver();
+        }
       }
-    }
-
-    // Fallback: if duck fell way below screen without crossing targetY, game over
-    if (falling.y > state.baseY + state.cameraY + 400) {
-      gameOver();
     }
   }
 
   function gameOver() {
     state.mode = "GAMEOVER";
     playFail();
-    triggerHaptic("heavy");
 
     if (state.score > state.highScore) {
       state.highScore = state.score;
@@ -626,15 +599,6 @@
   function loop() {
     // Update
     if (state.mode === "PLAYING") {
-      // Apply gyroscope tilt to current duck (works while falling, like drag does)
-      const gyro = getGyroState();
-      if (gyro.active && state.currentDuck && !state.currentDuck.isStatic) {
-        const tiltSpeed = 4; // Design-space pixels per frame at full tilt
-        const halfW = state.currentDuck.w / 2;
-        state.currentDuck.x += gyro.tiltX * tiltSpeed;
-        state.currentDuck.x = Math.max(halfW, Math.min(state.width - halfW, state.currentDuck.x));
-      }
-
       if (state.currentDuck) state.currentDuck.update();
       for (const d of state.ducks) {
         d.update();
@@ -728,21 +692,8 @@
   }
 
   // Inputs
-  const ARROW_MOVE_PX = 15; // Design-space pixels per arrow key press
   window.addEventListener("keydown", (e) => {
     if (e.code === "Space") inputHandler(e);
-
-    // Arrow key movement (works while duck is falling, like drag does)
-    if (state.mode === "PLAYING" && state.currentDuck && !state.currentDuck.isStatic) {
-      const halfW = state.currentDuck.w / 2;
-      if (e.code === "ArrowLeft") {
-        state.currentDuck.x = Math.max(halfW, state.currentDuck.x - ARROW_MOVE_PX);
-        e.preventDefault();
-      } else if (e.code === "ArrowRight") {
-        state.currentDuck.x = Math.min(state.width - halfW, state.currentDuck.x + ARROW_MOVE_PX);
-        e.preventDefault();
-      }
-    }
   });
 
   // Touch/Click on canvas
@@ -814,8 +765,7 @@
 
   document.getElementById("restartBtn")?.addEventListener("click", (e) => {
     e.stopPropagation();
-    // Retry: skip start screen and reuse the same seed
-    initGame(false, activeGameSeed);
+    initGame();
   });
 
   document.getElementById("continueLevelBtn")?.addEventListener("click", (e) => {
@@ -861,22 +811,43 @@
     });
   });
 
-  // Auto-generate a seed on page load so the field is never empty
-  if (!seedInput.value.trim()) {
-    seedInput.value = new SeededRandom().seed;
-  }
-
   // Initialize view
   resize();
   ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
   drawBackground(); // Draw once before loop starts
   loop(); // Start loop immediately so background animates
 
+  // Helper functions for input detection and controls
+  function detectInputMethod() {
+    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const isMouse = window.matchMedia('(pointer: fine)').matches;
+    if (isMouse && !isTouch) return 'keyboard'; // Assume desktop = keyboard
+    if (isTouch && isMouse) return 'both';
+    return 'touch';
+  }
+
+  function getControlHint() {
+    const method = detectInputMethod();
+    if (method === 'keyboard') return 'Press Space to drop';
+    if (method === 'touch') return 'Tap to drop';
+    return 'Tap or Press Space to drop';
+  }
+
+  function initGyroscope() {
+    // Gyroscope initialization would go here.
+    // Note: iOS requires user interaction to request permission.
+    if (window.DeviceOrientationEvent) {
+      // Placeholder: Setup listener if needed in future
+    }
+  }
+
   // Expose game state for E2E test assertions.
   // This is a client-side game with no sensitive data — the state is already
   // visible in the canvas and DOM. E2E tests run against the production build
   // (astro preview), so gating behind DEV would break them.
   (window as any).__gameState = state;
+  // Expose wobblePhysics for E2E test assertions
+  (window as any).__gameState.wobblePhysics = wobblePhysics;
 
   // Update control hints based on detected input method
   const controlHintEl = document.querySelector("#help-screen .help-item:nth-child(2) div");

@@ -77,7 +77,11 @@ export interface Config {
   mergeThreshold: number;
   spawnInterval: number;
   mergeGrowthRate: number;
-  levelUpWidthRatio: number;
+  levelUpScreenRatio: number;
+  baseMergesPerLevel: number;
+  difficultyScale: number;
+  autoDropBaseMs: number;
+  autoDropMinMs: number;
 }
 
 // Configuration
@@ -93,9 +97,33 @@ export const CONFIG: Config = {
   mergeThreshold: 5, // Merge after 5 stacks
   spawnInterval: 2000, // Spawn new duck every 2 seconds
   mergeGrowthRate: 0.5, // Base duck grows by 50% per merge
-  levelUpWidthRatio: 0.85, // Level up when base duck fills 85% of screen width
+  levelUpScreenRatio: 0.85, // Level up when base duck fills 85% of screen width
+  baseMergesPerLevel: 5,
+  difficultyScale: 1,
+  autoDropBaseMs: 3000,
+  autoDropMinMs: 500,
 };
 
+/**
+ * Compute the exponential merge growth rate for a given screen width and level.
+ * Returns the per-merge growth factor so that `baseMergesPerLevel + log2(level+2)*difficultyScale`
+ * merges will grow the base duck from CONFIG.duckBaseWidth to designWidth * levelUpScreenRatio.
+ * This ensures the same number of merges per level on all screen sizes.
+ */
+export function computeMergeGrowthRate(designWidth: number, level: number): number {
+  const baseWidth = CONFIG.duckBaseWidth;
+  const targetWidth = designWidth * CONFIG.levelUpScreenRatio;
+  const mergesNeeded =
+    CONFIG.baseMergesPerLevel + Math.floor(Math.log2(level + 2) * CONFIG.difficultyScale);
+  return (targetWidth / baseWidth) ** (1 / mergesNeeded) - 1;
+}
+
+/**
+ * Compute the number of merges needed for a given level.
+ */
+export function mergesForLevel(level: number): number {
+  return CONFIG.baseMergesPerLevel + Math.floor(Math.log2(level + 2) * CONFIG.difficultyScale);
+}
 // --- VISUALS ---
 
 export function drawPsyduck(
@@ -285,7 +313,6 @@ export class Particle {
 export class Duck {
   x: number;
   y: number;
-  prevY: number; // Previous frame Y for swept collision
   w: number;
   h: number;
   isStatic: boolean;
@@ -299,6 +326,7 @@ export class Duck {
   spawnX: number; // Random spawn position
   primaryColor: string;
   secondaryColor: string;
+  prevY: number;
 
   constructor(
     x: number,
@@ -346,9 +374,10 @@ export class Duck {
     }
 
     // Start or continue falling
-    this.isFalling = true;
-    this.prevY = this.y;
-    this.y += this.velocity;
+    if (this.isFalling) {
+      this.prevY = this.y;
+      this.y += this.velocity;
+    }
   }
 
   draw(ctx: CanvasRenderingContext2D, score: number) {
